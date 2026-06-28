@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Browser Speedrunner — Agent Console</title>
+<style>
+  :root {
+    --bg: #0b1020; --panel: #131a2e; --border: #243049;
+    --text: #e6ebf5; --muted: #8b95ad;
+    --accent: #6366f1; --ok: #22c55e; --warn: #f59e0b; --err: #ef4444;
+    --planner: #6366f1; --executor: #06b6d4; --verifier: #22c55e; --recovery: #f59e0b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--text); height: 100vh; overflow: hidden;
+  }
+  .wrap { display: flex; flex-direction: column; height: 100vh; }
+  header {
+    padding: 16px 22px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    background: linear-gradient(180deg, #141c33, #0f1426);
+  }
+  header h1 { font-size: 16px; margin: 0; letter-spacing: -0.3px; }
+  header .sub { font-size: 12px; color: var(--muted); }
+  .timer { text-align: right; }
+  .timer .t { font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums;
+    color: var(--accent); line-height: 1; }
+  .timer .lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+
+  .pipeline { display: flex; gap: 10px; padding: 16px 22px; }
+  .agent {
+    flex: 1; border: 1px solid var(--border); border-radius: 10px; padding: 12px;
+    background: var(--panel); transition: all .15s; opacity: .55; position: relative;
+  }
+  .agent.active { opacity: 1; transform: translateY(-2px); }
+  .agent .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+  .agent[data-a=planner] .dot { background: var(--planner); }
+  .agent[data-a=executor] .dot { background: var(--executor); }
+  .agent[data-a=verifier] .dot { background: var(--verifier); }
+  .agent[data-a=recovery] .dot { background: var(--recovery); }
+  .agent.active[data-a=planner] { border-color: var(--planner); box-shadow: 0 0 0 1px var(--planner); }
+  .agent.active[data-a=executor] { border-color: var(--executor); box-shadow: 0 0 0 1px var(--executor); }
+  .agent.active[data-a=verifier] { border-color: var(--verifier); box-shadow: 0 0 0 1px var(--verifier); }
+  .agent.active[data-a=recovery] { border-color: var(--recovery); box-shadow: 0 0 0 1px var(--recovery); }
+  .agent .name { font-size: 13px; font-weight: 700; }
+  .agent .role { font-size: 11px; color: var(--muted); margin-top: 2px; min-height: 28px; }
+  .agent .lat { font-size: 11px; color: var(--accent); font-variant-numeric: tabular-nums; margin-top: 6px; }
+
+  .progress-wrap { padding: 0 22px 12px; }
+  .bar { height: 8px; background: var(--panel); border-radius: 99px; overflow: hidden; border: 1px solid var(--border); }
+  .bar > div { height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), #22d3ee); transition: width .25s; }
+  .progress-meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+  .feed { flex: 1; overflow-y: auto; padding: 4px 22px 22px; }
+  .ev {
+    display: flex; gap: 10px; padding: 9px 0; border-bottom: 1px solid #1a2238;
+    font-size: 13px; animation: in .2s;
+  }
+  @keyframes in { from { opacity: 0; transform: translateX(-6px); } }
+  .ev .tag {
+    flex: 0 0 78px; font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .5px; padding-top: 1px;
+  }
+  .ev.planner .tag { color: var(--planner); }
+  .ev.executor .tag { color: var(--executor); }
+  .ev.verifier .tag { color: var(--verifier); }
+  .ev.recovery .tag { color: var(--recovery); }
+  .ev.system .tag { color: var(--muted); }
+  .ev .body { flex: 1; color: var(--text); }
+  .ev .body .meta { color: var(--muted); font-size: 11px; margin-top: 2px; }
+  .ev .lat { color: var(--accent); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .pill { display: inline-block; padding: 1px 7px; border-radius: 99px; font-size: 10px; font-weight: 700; }
+  .pill.ok { background: rgba(34,197,94,.15); color: var(--ok); }
+  .pill.err { background: rgba(239,68,68,.15); color: var(--err); }
+
+  footer { padding: 14px 22px; border-top: 1px solid var(--border); display: flex; gap: 12px; align-items: center; }
+  button {
+    background: var(--accent); color: #fff; border: none; padding: 11px 22px;
+    border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer;
+  }
+  button:disabled { opacity: .5; cursor: default; }
+  .status { font-size: 13px; color: var(--muted); }
+  .status.done { color: var(--ok); font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>⚡ Browser Speedrunner</h1>
+      <div class="sub">Cerebras × Gemma 4 — multi-agent RPA · provider: <span id="provider">—</span></div>
+    </div>
+    <div class="timer">
+      <div class="t" id="timer">0.0s</div>
+      <div class="lbl">elapsed</div>
+    </div>
+  </header>
+
+  <div class="pipeline" id="pipeline">
+    <div class="agent" data-a="planner"><div class="name"><span class="dot"></span>Planner</div>
+      <div class="role" id="role-planner">Decides the next sub-goal</div><div class="lat" id="lat-planner"></div></div>
+    <div class="agent" data-a="executor"><div class="name"><span class="dot"></span>Executor</div>
+      <div class="role" id="role-executor">Vision → concrete action</div><div class="lat" id="lat-executor"></div></div>
+    <div class="agent" data-a="verifier"><div class="name"><span class="dot"></span>Verifier</div>
+      <div class="role" id="role-verifier">Confirms the outcome</div><div class="lat" id="lat-verifier"></div></div>
+    <div class="agent" data-a="recovery"><div class="name"><span class="dot"></span>Recovery</div>
+      <div class="role" id="role-recovery">Handles failures</div><div class="lat" id="lat-recovery"></div></div>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="bar"><div id="bar"></div></div>
+    <div class="progress-meta"><span id="step-label">Ready</span><span id="step-count">0 / 0</span></div>
+  </div>
+
+  <div class="feed" id="feed"></div>
+
+  <footer>
+    <button id="run-btn">▶ Run Workflow</button>
+    <span class="status" id="status">Idle — press Run to start the agent loop.</span>
+  </footer>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const feed = $('feed');
+let timerInt = null, t0 = 0, llmTotal = 0;
+
+fetch('/api/run-config').then(r => r.json()).then(c => $('provider').textContent = c.provider);
+
+function setActive(agent) {
+  document.querySelectorAll('.agent').forEach(a =>
+    a.classList.toggle('active', a.dataset.a === agent));
+}
+function startTimer() {
+  t0 = performance.now();
+  timerInt = setInterval(() => {
+    $('timer').textContent = ((performance.now() - t0) / 1000).toFixed(1) + 's';
+  }, 50);
+}
+function stopTimer() { clearInterval(timerInt); }
+
+function addEvent(cls, tag, html, lat) {
+  const el = document.createElement('div');
+  el.className = 'ev ' + cls;
+  el.innerHTML = `<div class="tag">${tag}</div><div class="body">${html}</div>` +
+                 (lat != null ? `<div class="lat">${lat}ms</div>` : '');
+  feed.appendChild(el);
+  feed.scrollTop = feed.scrollHeight;
+}
+
+function handle(ev) {
+  switch (ev.type) {
+    case 'run_start':
+      $('step-count').textContent = `0 / ${ev.total_steps}`;
+      $('status').textContent = `Running on ${ev.provider}…`;
+      addEvent('system', 'system', `Workflow <b>${ev.workflow}</b> started — ${ev.total_steps} steps on <b>${ev.provider}</b>.`);
+      break;
+    case 'agent_start':
+      setActive(ev.agent);
+      break;
+    case 'agent_result': {
+      const r = ev.result || {};
+      $('lat-' + ev.agent).textContent = ev.latency_ms + 'ms';
+      llmTotal += ev.latency_ms;
+      if (ev.agent === 'planner' && !r.done)
+        addEvent('planner', 'Planner', `→ <b>${r.sub_goal || ''}</b><div class="meta">${r.reasoning || ''}</div>`, ev.latency_ms);
+      else if (ev.agent === 'planner' && r.done)
+        addEvent('planner', 'Planner', `All steps satisfied.`, ev.latency_ms);
+      else if (ev.agent === 'executor')
+        addEvent('executor', 'Executor', `Chose <b>${r.target_label || ('#' + r.index)}</b> · ${r.action}<div class="meta">${r.reasoning || ''}</div>`, ev.latency_ms);
+      else if (ev.agent === 'verifier')
+        addEvent('verifier', 'Verifier', `${r.success ? '<span class="pill ok">PASS</span>' : '<span class="pill err">FAIL</span>'} ${r.what_changed || ''}<div class="meta">${r.reasoning || ''}</div>`, ev.latency_ms);
+      else if (ev.agent === 'recovery')
+        addEvent('recovery', 'Recovery', `Strategy: <b>${r.strategy}</b><div class="meta">${r.reasoning || ''}</div>`, ev.latency_ms);
+      break;
+    }
+    case 'action':
+      addEvent('executor', 'Action', `<b>${ev.action}</b> → ${ev.target_label || ('#' + ev.index)}` +
+        (ev.value != null ? ` = “${ev.value}”` : ''));
+      break;
+    case 'verification':
+      if (ev.mode === 'auto')
+        addEvent('verifier', 'Verifier', `${ev.success ? '<span class="pill ok">PASS</span>' : '<span class="pill err">FAIL</span>'} auto-confirmed “${ev.observed}”`);
+      break;
+    case 'step_complete': {
+      const pct = Math.round((ev.completed / ev.total) * 100);
+      $('bar').style.width = pct + '%';
+      $('step-count').textContent = `${ev.completed} / ${ev.total}`;
+      $('step-label').textContent = ev.sub_goal;
+      break;
+    }
+    case 'step_failed':
+      addEvent('system', 'system', `<span class="pill err">STEP FAILED</span> ${ev.sub_goal} — ${ev.reason}`);
+      break;
+    case 'run_complete':
+      stopTimer();
+      $('status').textContent = ev.success
+        ? `✓ Done — ${ev.completed}/${ev.total} steps in ${(ev.elapsed_ms/1000).toFixed(1)}s (LLM: ${(llmTotal/1000).toFixed(1)}s)`
+        : `Stopped — ${ev.completed}/${ev.total} steps`;
+      $('status').className = 'status' + (ev.success ? ' done' : '');
+      setActive(null);
+      $('run-btn').disabled = false;
+      addEvent('system', 'system', `<b>Run complete</b> — ${ev.completed}/${ev.total} steps in <b>${(ev.elapsed_ms/1000).toFixed(1)}s</b>.`);
+      break;
+    case 'fatal':
+      stopTimer();
+      addEvent('system', 'system', `<span class="pill err">FATAL</span> ${ev.error}`);
+      $('run-btn').disabled = false;
+      break;
+  }
+}
+
+$('run-btn').addEventListener('click', () => {
+  $('run-btn').disabled = true;
+  feed.innerHTML = ''; llmTotal = 0; $('bar').style.width = '0';
+  $('status').className = 'status';
+  startTimer();
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  const ws = new WebSocket(`${proto}://${location.host}/ws/run`);
+  ws.onopen = () => ws.send(JSON.stringify({}));
+  ws.onmessage = (m) => handle(JSON.parse(m.data));
+  ws.onerror = () => { addEvent('system', 'system', 'WebSocket error.'); $('run-btn').disabled = false; stopTimer(); };
+});
+</script>
+</body>
+</html>

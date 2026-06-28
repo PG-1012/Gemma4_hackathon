@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Acme Corp — Expense Report</title>
+<style>
+  :root {
+    --bg: #f4f6f8;
+    --card: #ffffff;
+    --border: #d7dde3;
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --ok: #16a34a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 32px 16px;
+  }
+  .card {
+    max-width: 760px;
+    margin: 0 auto;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    overflow: hidden;
+  }
+  .header {
+    padding: 24px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .header h1 { font-size: 20px; margin: 0; }
+  .header .logo {
+    font-weight: 700; color: var(--accent); letter-spacing: -0.5px; font-size: 18px;
+  }
+  form { padding: 24px 32px 32px; }
+  .row { display: flex; gap: 20px; }
+  .row > .field { flex: 1; }
+  .field { margin-bottom: 18px; }
+  label {
+    display: block; font-size: 13px; font-weight: 600;
+    color: var(--text); margin-bottom: 6px;
+  }
+  .req { color: #dc2626; }
+  input[type="text"], input[type="number"], input[type="date"],
+  input[type="email"], select, textarea {
+    width: 100%; padding: 10px 12px; font-size: 14px;
+    border: 1px solid var(--border); border-radius: 8px;
+    background: #fff; color: var(--text); font-family: inherit;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+  }
+  textarea { resize: vertical; min-height: 80px; }
+  .checks { display: flex; flex-direction: column; gap: 10px; margin: 8px 0 20px; }
+  .check { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+  .check input { width: 16px; height: 16px; }
+  .actions { display: flex; gap: 12px; align-items: center; }
+  button {
+    background: var(--accent); color: #fff; border: none;
+    padding: 12px 28px; font-size: 15px; font-weight: 600;
+    border-radius: 8px; cursor: pointer;
+  }
+  button:hover { background: var(--accent-hover); }
+  button.secondary { background: #fff; color: var(--text); border: 1px solid var(--border); }
+  .section-title {
+    font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;
+    color: var(--muted); margin: 24px 0 12px; font-weight: 700;
+  }
+  #success {
+    display: none; padding: 14px 32px; background: #ecfdf5;
+    color: var(--ok); font-weight: 600; border-top: 1px solid #bbf7d0;
+  }
+  #success.show { display: block; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <h1>Expense Report</h1>
+      <span class="logo">ACME CORP</span>
+    </div>
+    <form id="expense-form" autocomplete="off">
+      <div class="section-title">Employee</div>
+      <div class="row">
+        <div class="field">
+          <label for="employee_name">Employee Name <span class="req">*</span></label>
+          <input type="text" id="employee_name" name="employee_name" />
+        </div>
+        <div class="field">
+          <label for="employee_id">Employee ID <span class="req">*</span></label>
+          <input type="text" id="employee_id" name="employee_id" />
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="email">Work Email</label>
+          <input type="email" id="email" name="email" />
+        </div>
+        <div class="field">
+          <label for="department">Department <span class="req">*</span></label>
+          <select id="department" name="department">
+            <option value="">Select…</option>
+            <option>Engineering</option>
+            <option>Sales</option>
+            <option>Marketing</option>
+            <option>Finance</option>
+            <option>Operations</option>
+            <option>Human Resources</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="section-title">Expense Details</div>
+      <div class="row">
+        <div class="field">
+          <label for="category">Expense Category <span class="req">*</span></label>
+          <select id="category" name="category">
+            <option value="">Select…</option>
+            <option>Travel</option>
+            <option>Meals &amp; Entertainment</option>
+            <option>Office Supplies</option>
+            <option>Software &amp; Subscriptions</option>
+            <option>Training</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="amount">Amount (USD) <span class="req">*</span></label>
+          <input type="number" id="amount" name="amount" step="0.01" min="0" />
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="expense_date">Expense Date <span class="req">*</span></label>
+          <input type="date" id="expense_date" name="expense_date" />
+        </div>
+        <div class="field">
+          <label for="vendor">Vendor / Merchant</label>
+          <input type="text" id="vendor" name="vendor" />
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="project_code">Project Code</label>
+          <input type="text" id="project_code" name="project_code" />
+        </div>
+        <div class="field">
+          <label for="cost_center">Cost Center</label>
+          <input type="text" id="cost_center" name="cost_center" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="justification">Business Justification <span class="req">*</span></label>
+        <textarea id="justification" name="justification"></textarea>
+      </div>
+
+      <div class="section-title">Approval</div>
+      <div class="row">
+        <div class="field">
+          <label for="manager">Approving Manager <span class="req">*</span></label>
+          <select id="manager" name="manager">
+            <option value="">Select…</option>
+            <option>Sarah Chen</option>
+            <option>Marcus Webb</option>
+            <option>Priya Nair</option>
+            <option>David Olsen</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="payment_method">Payment Method</label>
+          <select id="payment_method" name="payment_method">
+            <option value="">Select…</option>
+            <option>Corporate Card</option>
+            <option>Personal Card (Reimburse)</option>
+            <option>Cash</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="checks">
+        <label class="check"><input type="checkbox" id="receipts_attached" name="receipts_attached" /> Receipts attached</label>
+        <label class="check"><input type="checkbox" id="billable" name="billable" /> Billable to client</label>
+        <label class="check"><input type="checkbox" id="terms" name="terms" /> I certify these expenses comply with company policy <span class="req">*</span></label>
+      </div>
+
+      <div class="actions">
+        <button type="submit" id="submit-btn">Submit Expense Report</button>
+        <button type="button" class="secondary" id="reset-btn">Clear</button>
+      </div>
+    </form>
+    <div id="success">✓ Expense report submitted successfully.</div>
+  </div>
+
+<script>
+  const form = document.getElementById('expense-form');
+  const success = document.getElementById('success');
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    success.classList.add('show');
+    success.scrollIntoView({ behavior: 'smooth' });
+  });
+  document.getElementById('reset-btn').addEventListener('click', () => {
+    form.reset();
+    success.classList.remove('show');
+  });
+</script>
+</body>
+</html>
