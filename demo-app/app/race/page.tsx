@@ -1,11 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Switch } from "@heroui/react";
+import { Switch, Tabs, Tab } from "@heroui/react";
 import { AgentName, AgentEvent } from "@/lib/types/agent-events";
 import { Phase } from "@/lib/types/phase";
 import { LAYOUT_A, LAYOUT_B, orderedFieldIds } from "@/lib/fields";
+import { VISA_LAYOUT_A, VISA_LAYOUT_B } from "@/lib/visa-fields";
 import { createSimulator, EventSource } from "@/lib/event-bus/simulator";
+import {
+  createVisaSimulator,
+  createVisaAutoHuman,
+  visibleVisaSteps,
+} from "@/lib/event-bus/visaSimulator";
 import { createAutoHuman } from "@/lib/event-bus/autoHuman";
 import {
   applyFieldAction,
@@ -30,6 +36,7 @@ const IDLE_AGENTS: Record<AgentName, AgentRuntime> = {
 
 export default function RacePage() {
   const [phase, setPhase] = useState<Phase>("idle");
+  const [workflow, setWorkflow] = useState<"expense" | "visa">("expense");
   const [variant, setVariant] = useState<"A" | "B">("A");
   const [resetKey, setResetKey] = useState(0);
   const [agents, setAgents] = useState<Record<AgentName, AgentRuntime>>(IDLE_AGENTS);
@@ -44,9 +51,17 @@ export default function RacePage() {
   const [detail, setDetail] = useState<string | undefined>();
   const [autoHuman, setAutoHuman] = useState(true);
 
+  const isVisa = workflow === "visa";
   const layout = variant === "A" ? LAYOUT_A : LAYOUT_B;
-  const total = orderedFieldIds(layout).length;
-  const src = variant === "A" ? "/form-a" : "/form-b";
+  const visaLayout = variant === "A" ? VISA_LAYOUT_A : VISA_LAYOUT_B;
+  const total = isVisa
+    ? visibleVisaSteps(visaLayout).length
+    : orderedFieldIds(layout).length;
+  const src = isVisa
+    ? variant === "A" ? "/visa-a" : "/visa-b"
+    : variant === "A" ? "/form-a" : "/form-b";
+  const humanFieldIds = () =>
+    isVisa ? visibleVisaSteps(visaLayout).map((s) => s.id) : orderedFieldIds(layout);
 
   const aiIframe = useRef<HTMLIFrameElement>(null);
   const humanIframe = useRef<HTMLIFrameElement>(null);
@@ -122,7 +137,7 @@ export default function RacePage() {
       phase === "finished" ||
       phase === "rerunFinished";
     if (!live) return;
-    const ids = orderedFieldIds(layout);
+    const ids = humanFieldIds();
     const interval = setInterval(() => {
       // human progress from the real (or auto) iframe
       const hdoc = getDoc(humanIframe.current);
@@ -171,21 +186,23 @@ export default function RacePage() {
     setPhase(nextPhase);
     setHumanRunning(true);
     // wait for the freshly-remounted iframes to load, then start the stream
+    // (visa wizard needs a touch longer to mount its 6 pages)
     setTimeout(() => {
       if (runId.current !== myRun) return; // superseded before we even started
-      sourceRef.current = createSimulator({
-        layout,
-        withRecovery,
-        onEvent: (ev) => {
-          if (runId.current === myRun) handleEvent(ev);
-        },
-      });
+      const onEvent = (ev: AgentEvent) => {
+        if (runId.current === myRun) handleEvent(ev);
+      };
+      sourceRef.current = isVisa
+        ? createVisaSimulator({ layout: visaLayout, withRecovery, onEvent })
+        : createSimulator({ layout, withRecovery, onEvent });
       sourceRef.current.start();
       if (autoHuman) {
-        autoHumanRef.current = createAutoHuman(humanIframe.current, layout);
+        autoHumanRef.current = isVisa
+          ? createVisaAutoHuman(humanIframe.current, visaLayout)
+          : createAutoHuman(humanIframe.current, layout);
         autoHumanRef.current.start();
       }
-    }, 500);
+    }, isVisa ? 750 : 500);
   };
 
   const onRecord = () => {
@@ -235,6 +252,11 @@ export default function RacePage() {
     humanFinish.current = null;
     setPhase("idle");
   };
+  const changeWorkflow = (w: "expense" | "visa") => {
+    if (w === workflow) return;
+    setWorkflow(w);
+    onReset(); // switching examples starts fresh
+  };
 
   useEffect(() => () => stopSources(), []);
 
@@ -247,10 +269,22 @@ export default function RacePage() {
             ⚡ AI Workflow Automation
           </h1>
           <span className="text-[11px] text-slate-500">
-            Vision-based RPA · Gemma 4 on Cerebras vs. enterprise paperwork
+            Vision-based RPA · Gemma 4 on Cerebras vs.{" "}
+            {isVisa ? "government bureaucracy" : "enterprise paperwork"}
           </span>
         </div>
         <div className="flex items-center gap-3">
+          <Tabs
+            size="sm"
+            radius="full"
+            aria-label="Workflow"
+            selectedKey={workflow}
+            onSelectionChange={(k) => changeWorkflow(k as "expense" | "visa")}
+            classNames={{ tabList: "bg-ink-800 border border-ink-600" }}
+          >
+            <Tab key="expense" title="Expense" />
+            <Tab key="visa" title="Visa" />
+          </Tabs>
           <Switch
             size="sm"
             color="success"

@@ -56,8 +56,16 @@ export function applyFieldAction(
     | HTMLInputElement
     | HTMLSelectElement
     | HTMLTextAreaElement
+    | HTMLButtonElement
+    | HTMLAnchorElement
     | null;
   if (!el) return;
+
+  // buttons / links (e.g. the wizard's Next / Submit) get a real click
+  if (action === "click" && (el.tagName === "BUTTON" || el.tagName === "A")) {
+    (el as HTMLElement).click();
+    return;
+  }
 
   if (el instanceof HTMLInputElement && (el.type === "checkbox" || el.type === "radio")) {
     el.checked = value === undefined ? true : value === "true";

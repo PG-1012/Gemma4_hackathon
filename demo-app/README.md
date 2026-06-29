@@ -17,9 +17,18 @@ npm run dev          # http://localhost:3000  → redirects to /race
 ```
 
 Routes:
-- `/race` — the split-screen demo surface (main stage)
+- `/race` — the split-screen demo surface (main stage). Toggle **Expense / Visa**
+  in the top bar to switch which workflow races.
 - `/form-a` — the mock expense form, original layout
 - `/form-b` — the same form, **mutated** layout (two-column, reordered, relabeled)
+- `/visa-a` — a 6-page government immigration wizard (~72 visible fields,
+  conditional fields, government-portal aesthetic) — the "hard mode" workflow
+- `/visa-b` — the same wizard, **mutated** (pages swapped, fields reordered,
+  labels reworded) for the adaptation demo
+
+Both workflows share the same `data-field-id` convention and event contract; the
+visa simulator additionally clicks the wizard's "Next" button to page through
+all six sections and submits at the end.
 
 ## Demo flow (the buttons, in order)
 
