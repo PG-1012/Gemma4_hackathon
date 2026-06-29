@@ -3,7 +3,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "AI Workflow Automation - Placeholder name",
+  title: "Flowstate",
   description: "Vision-based RPA — Gemma 4 on Cerebras vs. enterprise paperwork.",
 };
 

@@ -7,7 +7,7 @@
     {"sub_goal": "Enter the work email", "action": "fill", "field": "email", "label": "Work Email", "value": "jordan.avery@acme.com"},
     {"sub_goal": "Choose the department", "action": "select", "field": "department", "label": "Department", "value": "Engineering"},
     {"sub_goal": "Choose the expense category", "action": "select", "field": "category", "label": "Expense Category", "value": "Travel"},
-    {"sub_goal": "Enter the amount", "action": "fill", "field": "amount", "label": "Amount", "value": "1284.50"},
+    {"sub_goal": "Enter the amount", "action": "fill", "field": "amount", "label": "Amount", "value": "1250"},
     {"sub_goal": "Enter the expense date", "action": "fill", "field": "expense_date", "label": "Expense Date", "value": "2026-06-15"},
     {"sub_goal": "Enter the vendor", "action": "fill", "field": "vendor", "label": "Vendor", "value": "United Airlines"},
     {"sub_goal": "Enter the project code", "action": "fill", "field": "project_code", "label": "Project Code", "value": "PRJ-2026-Q3-114"},

@@ -48,33 +48,35 @@ def serve() -> socketserver.TCPServer:
 def main() -> None:
     httpd = serve()
     url = f"http://127.0.0.1:{PORT}/web/expense-form.html"
+    settings.headless = False  # ensure visible
 
-    # LEFT: human window (separate Playwright instance, no automation)
-    pw_human = sync_playwright().start()
-    human = pw_human.chromium.launch(
+    # ONE Playwright instance, two browser windows launched from it (two
+    # separate .start() calls can conflict in a single process).
+    pw = sync_playwright().start()
+
+    # LEFT: human window — a plain form for a teammate to fill manually
+    human = pw.chromium.launch(
         headless=False,
         args=[f"--window-position=0,0", f"--window-size={W},{H}"],
     )
     human_page = human.new_context(no_viewport=True).new_page()
     human_page.goto(url)
 
-    # RIGHT: AI window, positioned to the right
-    settings.headless = False  # ensure visible
-    ai = BrowserController()
-    # monkeypatch launch args via env-free override: start then reposition
-    pw_ai = sync_playwright().start()
-    ai_browser = pw_ai.chromium.launch(
+    # RIGHT: AI window, driven by the real agent loop (Gemma on Cerebras)
+    ai_browser = pw.chromium.launch(
         headless=False,
-        args=[f"--window-position={W+8},0", f"--window-size={W},{H}"],
+        args=[f"--window-position={W + 8},0", f"--window-size={W},{H}"],
     )
+    ai = BrowserController()
     ai.page = ai_browser.new_context(no_viewport=True).new_page()
-    ai._pw, ai._browser = pw_ai, ai_browser
+    ai._pw, ai._browser = pw, ai_browser
     ai.goto(url)
 
     workflow = Workflow.from_json(WORKFLOW)
     workflow.url = url
 
-    print("\n  LEFT = human   |   RIGHT = AI")
+    print(f"\n  Provider: {settings.llm_provider}  (model: {settings.cerebras_model})")
+    print("  LEFT = human   |   RIGHT = AI")
     input("  Press Enter to START BOTH simultaneously…")
     t0 = time.perf_counter()
 
@@ -83,16 +85,17 @@ def main() -> None:
             dt = time.perf_counter() - t0
             print(f"  [AI {dt:4.1f}s] {ev['completed']}/{ev['total']}  {ev['sub_goal']}")
         elif ev.get("type") == "run_complete":
-            print(f"\n  AI FINISHED in {ev['elapsed_ms']/1000:.1f}s "
+            print(f"\n  AI FINISHED in {ev['elapsed_ms'] / 1000:.1f}s "
                   f"({ev['completed']}/{ev['total']} steps)")
 
-    Orchestrator(get_llm(), ai, emit=emit).run(workflow)
-
-    input("\n  Press Enter to close both windows…")
-    ai.stop()
-    human.close()
-    pw_human.stop()
-    httpd.shutdown()
+    try:
+        Orchestrator(get_llm(), ai, emit=emit).run(workflow)
+    finally:
+        input("\n  Press Enter to close both windows…")
+        ai_browser.close()
+        human.close()
+        pw.stop()
+        httpd.shutdown()
 
 
 if __name__ == "__main__":

@@ -13,6 +13,7 @@ import {
   visibleVisaSteps,
 } from "@/lib/event-bus/visaSimulator";
 import { createAutoHuman } from "@/lib/event-bus/autoHuman";
+import { createWsClient } from "@/lib/event-bus/websocket";
 import {
   applyFieldAction,
   countFilled,
@@ -50,6 +51,7 @@ export default function RacePage() {
   const [speedup, setSpeedup] = useState<number | null>(null);
   const [detail, setDetail] = useState<string | undefined>();
   const [autoHuman, setAutoHuman] = useState(true);
+  const [live, setLive] = useState(false); // drive AI from the real backend (expense only)
 
   const isVisa = workflow === "visa";
   const layout = variant === "A" ? LAYOUT_A : LAYOUT_B;
@@ -192,7 +194,12 @@ export default function RacePage() {
       const onEvent = (ev: AgentEvent) => {
         if (runId.current === myRun) handleEvent(ev);
       };
-      sourceRef.current = isVisa
+      // Live mode (expense only): drive the AI from the real Gemma backend over
+      // WebSocket. Visa + all mutated/rerun flows stay on the local simulator.
+      const useLive = live && !isVisa && nextPhase === "racing";
+      sourceRef.current = useLive
+        ? createWsClient(onEvent)
+        : isVisa
         ? createVisaSimulator({ layout: visaLayout, withRecovery, onEvent })
         : createSimulator({ layout, withRecovery, onEvent });
       sourceRef.current.start();
@@ -267,7 +274,7 @@ export default function RacePage() {
       <header className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h1 className="text-lg font-extrabold tracking-tight">
-            ⚡ AI Workflow Automation
+            ⚡ Flowstate
           </h1>
           <span className="text-[11px] text-slate-500">
             Vision-based RPA · Gemma 4 on Cerebras vs.{" "}
@@ -286,6 +293,16 @@ export default function RacePage() {
             <Tab key="expense" title="Expense" />
             <Tab key="visa" title="Visa" />
           </Tabs>
+          <Switch
+            size="sm"
+            color="warning"
+            isSelected={live}
+            isDisabled={isVisa}
+            onValueChange={setLive}
+            classNames={{ label: "text-[11px] text-slate-400" }}
+          >
+            live AI
+          </Switch>
           <Switch
             size="sm"
             color="success"

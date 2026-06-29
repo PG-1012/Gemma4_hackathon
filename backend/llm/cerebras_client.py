@@ -66,11 +66,30 @@ class CerebrasClient(LLMClient):
             # Many OpenAI-compatible servers honor this; harmless if ignored.
             "response_format": {"type": "json_object"},
         }
-        resp = self._client.post("/chat/completions", json=payload)
-        if resp.status_code >= 400:
-            self._raise_api_error(resp)
-        text = resp.json()["choices"][0]["message"]["content"]
-        return self._parse_json(text)
+        # Real models occasionally emit malformed/truncated JSON or hit a
+        # transient error. Retry a few times so one bad response never kills a
+        # live run; 4xx config errors (bad model / no billing) fail fast.
+        import json as _json
+
+        last_exc: Exception | None = None
+        for _ in range(3):
+            try:
+                resp = self._client.post("/chat/completions", json=payload)
+            except httpx.HTTPError as exc:
+                last_exc = exc
+                continue
+            if resp.status_code >= 400:
+                if resp.status_code < 500:
+                    self._raise_api_error(resp)  # config error — propagate, no retry
+                last_exc = RuntimeError(f"Cerebras {resp.status_code}")
+                continue
+            text = resp.json()["choices"][0]["message"]["content"]
+            try:
+                return self._parse_json(text)
+            except _json.JSONDecodeError as exc:
+                last_exc = exc
+                continue
+        raise RuntimeError(f"Cerebras call failed after retries: {last_exc}")
 
     @staticmethod
     def _raise_api_error(resp: "httpx.Response") -> None:

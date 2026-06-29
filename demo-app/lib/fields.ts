@@ -39,7 +39,7 @@ export const FIELDS: Record<string, FieldDef> = {
   "expense-date": { id: "expense-date", label: "Date of expense", type: "date", sampleValue: "2026-06-15" },
   "expense-category": { id: "expense-category", label: "Expense category", type: "select", options: ["Travel", "Meals", "Software", "Office Supplies", "Client Entertainment", "Training"], sampleValue: "Travel" },
   "vendor-name": { id: "vendor-name", label: "Vendor name", type: "text", placeholder: "Merchant or supplier", sampleValue: "United Airlines" },
-  amount: { id: "amount", label: "Amount", type: "number", prefix: "$", placeholder: "0.00", helper: "Enter the pre-tax amount.", sampleValue: "1284.50" },
+  amount: { id: "amount", label: "Amount", type: "number", prefix: "$", placeholder: "0.00", helper: "Enter the pre-tax amount.", sampleValue: "1250" },
   currency: { id: "currency", label: "Currency", type: "select", options: ["USD", "CAD", "EUR", "GBP"], helper: "Required for international expenses.", sampleValue: "USD" },
   "payment-method": { id: "payment-method", label: "Payment method", type: "radio", options: ["Personal Card", "Corporate Card", "Cash"], fullWidth: true, sampleValue: "Corporate Card" },
   "project-code": { id: "project-code", label: "Project code", type: "text", placeholder: "PRJ-0000-000", sampleValue: "PRJ-2026-Q3-114" },

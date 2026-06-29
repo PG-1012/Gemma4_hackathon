@@ -102,14 +102,16 @@ class Orchestrator:
                     continue
 
                 idx = decision["index"]
-                act_value = decision.get("value")
+                # Use the workflow's known value (ground truth) for what to type —
+                # the model only grounds WHERE to act, it must not invent the value.
+                act_value = step.value if step.value is not None else decision.get("value")
                 if decision.get("action") == "upload":
                     act_value = self._resolve_upload_path(workflow, act_value)
                 try:
                     self.browser.act(decision["action"], idx, act_value)
                     self.emit({"type": "action", "agent": "executor", "step_index": step_index,
                                "action": decision["action"], "index": idx,
-                               "value": act_value,
+                               "value": act_value, "field": step.field,
                                "target_label": decision.get("target_label")})
                 except Exception as exc:  # action raised — let Recovery decide
                     last_failure = f"Action error: {exc}"
