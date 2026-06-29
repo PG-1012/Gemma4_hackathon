@@ -5,6 +5,7 @@ venv/
 .env
 .DS_Store
 node_modules/
+.tooling/
 *.log
 .pytest_cache/
 backend/workflow/recordings/
