@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Browser Speedrunner — Recording Playback</title>
+<style>
+  :root {
+    --bg:#0b1020; --panel:#131a2e; --border:#243049; --text:#e6ebf5; --muted:#8b95ad;
+    --accent:#6366f1; --ok:#22c55e; --err:#ef4444;
+    --fill:#06b6d4; --select:#a78bfa; --check:#22c55e; --upload:#f59e0b; --submit:#ef4444; --click:#64748b;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+         background:var(--bg); color:var(--text); height:100vh; overflow:hidden; }
+  .wrap { display:grid; grid-template-columns:280px 1fr; grid-template-rows:auto 1fr; height:100vh; }
+  header { grid-column:1 / 3; padding:14px 20px; border-bottom:1px solid var(--border);
+           display:flex; align-items:center; justify-content:space-between;
+           background:linear-gradient(180deg,#141c33,#0f1426); }
+  header h1 { font-size:16px; margin:0; }
+  header .sub { font-size:12px; color:var(--muted); }
+  header a { color:var(--accent); font-size:13px; text-decoration:none; }
+  .side { border-right:1px solid var(--border); overflow-y:auto; padding:10px; }
+  .side h2 { font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); margin:6px 6px 10px; }
+  .rec { padding:10px 12px; border:1px solid var(--border); border-radius:8px; margin-bottom:8px; cursor:pointer; background:var(--panel); }
+  .rec:hover { border-color:var(--accent); }
+  .rec.sel { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
+  .rec .n { font-size:13px; font-weight:700; }
+  .rec .m { font-size:11px; color:var(--muted); margin-top:3px; }
+  .main { display:flex; flex-direction:column; overflow:hidden; padding:16px 20px; gap:14px; }
+  .stage { position:relative; flex:1; min-height:0; display:flex; align-items:center; justify-content:center;
+           background:#070b16; border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+  .stage img { max-width:100%; max-height:100%; object-fit:contain; display:block; }
+  .stage .empty { color:var(--muted); font-size:13px; }
+  .hl { position:absolute; border:2px solid var(--accent); border-radius:4px; box-shadow:0 0 0 9999px rgba(2,6,18,.45);
+        pointer-events:none; transition:all .15s; }
+  .caption { position:absolute; left:10px; bottom:10px; right:10px; background:rgba(8,12,24,.85);
+             border:1px solid var(--border); border-radius:8px; padding:8px 12px; font-size:13px; }
+  .caption .badge { display:inline-block; padding:1px 8px; border-radius:99px; font-size:10px; font-weight:800;
+                    text-transform:uppercase; margin-right:8px; color:#04121f; }
+  .controls { display:flex; align-items:center; gap:12px; }
+  button { background:var(--accent); color:#fff; border:none; padding:9px 16px; border-radius:8px;
+           font-size:14px; font-weight:700; cursor:pointer; }
+  button.ghost { background:var(--panel); border:1px solid var(--border); }
+  button:disabled { opacity:.4; cursor:default; }
+  .seek { flex:1; }
+  .count { font-variant-numeric:tabular-nums; color:var(--muted); font-size:13px; min-width:70px; text-align:right; }
+  .detail { display:grid; grid-template-columns:1fr 1fr; gap:10px 22px; font-size:13px;
+            border-top:1px solid var(--border); padding-top:12px; max-height:34%; overflow-y:auto; }
+  .detail .k { color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.5px; }
+  .detail .v { margin-bottom:8px; word-break:break-word; }
+  .sels { font-family:ui-monospace,Menlo,monospace; font-size:11px; color:var(--muted); }
+  .sels span { color:var(--text); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div><h1>🎬 Recording Playback</h1><div class="sub" id="sub">Step through a captured workflow</div></div>
+    <div><a href="/web/index.html">⚡ Live agent console →</a></div>
+  </header>
+
+  <div class="side">
+    <h2>Recordings</h2>
+    <div id="list"></div>
+  </div>
+
+  <div class="main">
+    <div class="stage" id="stage"><div class="empty">Select a recording on the left.</div></div>
+    <div class="controls">
+      <button class="ghost" id="prev">◀ Prev</button>
+      <button id="play">▶ Play</button>
+      <button class="ghost" id="next">Next ▶</button>
+      <input class="seek" type="range" id="seek" min="0" max="0" value="0" />
+      <span class="count" id="count">— / —</span>
+      <button id="runlive" disabled title="Replay this workflow live with the agent">Run live ▶</button>
+    </div>
+    <div class="detail" id="detail"></div>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const ACTION_COLORS = { fill:'--fill', select:'--select', check:'--check', uncheck:'--check',
+                        upload:'--upload', submit:'--submit', click:'--click' };
+let rec = null, runId = null, idx = 0, playing = null, workflowPath = null;
+
+async function loadList() {
+  const { recordings } = await (await fetch('/api/recordings/list')).json();
+  const list = $('list');
+  if (!recordings.length) { list.innerHTML = '<div class="rec"><div class="m">No recordings yet. Use the extension to record one.</div></div>'; return; }
+  list.innerHTML = '';
+  for (const r of recordings) {
+    const div = document.createElement('div');
+    div.className = 'rec';
+    div.innerHTML = `<div class="n">${r.name}</div><div class="m">${r.steps} steps · ${r.recorded_at || r.run_id}</div>`;
+    div.onclick = () => { document.querySelectorAll('.rec').forEach(x=>x.classList.remove('sel')); div.classList.add('sel'); open(r); };
+    list.appendChild(div);
+  }
+}
+
+async function open(r) {
+  runId = r.run_id; workflowPath = r.workflow_path;
+  rec = await (await fetch(`/recordings/${runId}/recording.json`)).json();
+  idx = 0;
+  $('sub').textContent = `${rec.name} — ${rec.stats ? rec.stats.step_count : rec.steps.length} steps`;
+  $('seek').max = rec.steps.length - 1;
+  $('runlive').disabled = false;
+  render();
+}
+
+function render() {
+  if (!rec) return;
+  const step = rec.steps[idx];
+  const shot = step.screenshots && step.screenshots.after;
+  const stage = $('stage');
+  const color = getComputedStyle(document.documentElement).getPropertyValue(ACTION_COLORS[step.action] || '--accent');
+  stage.innerHTML = '';
+  if (shot) {
+    const img = new Image();
+    img.onload = () => drawHighlight(img, step);
+    img.src = `/recordings/${runId}/${shot}`;
+    stage.appendChild(img);
+  } else {
+    const e = document.createElement('div'); e.className = 'empty';
+    e.textContent = '(no screenshot captured for this step)'; stage.appendChild(e);
+  }
+  const cap = document.createElement('div'); cap.className = 'caption';
+  const val = step.value != null && step.value !== '' ? ` — “${step.value}”` : '';
+  cap.innerHTML = `<span class="badge" style="background:${color}">${step.action}</span><b>${step.sub_goal}</b>${val}`;
+  stage.appendChild(cap);
+
+  $('count').textContent = `${idx + 1} / ${rec.steps.length}`;
+  $('seek').value = idx;
+  $('prev').disabled = idx === 0;
+  $('next').disabled = idx === rec.steps.length - 1;
+  renderDetail(step);
+}
+
+function drawHighlight(img, step) {
+  const box = step.element && step.element.box;
+  const vp = rec.viewport || {};
+  if (!box || !vp.width) return;
+  const scale = img.clientWidth / vp.width;     // CSS px → rendered px
+  const hl = document.createElement('div');
+  hl.className = 'hl';
+  const rect = img.getBoundingClientRect(), stageRect = $('stage').getBoundingClientRect();
+  const offX = rect.left - stageRect.left, offY = rect.top - stageRect.top;
+  hl.style.left = (offX + box.x * scale) + 'px';
+  hl.style.top = (offY + box.y * scale) + 'px';
+  hl.style.width = (box.w * scale) + 'px';
+  hl.style.height = (box.h * scale) + 'px';
+  $('stage').appendChild(hl);
+}
+
+function renderDetail(step) {
+  const el = step.element || {};
+  const rows = [];
+  const add = (k, v) => { if (v != null && v !== '' && !(Array.isArray(v) && !v.length)) rows.push([k, v]); };
+  add('Target', el.label || el.name || el.id);
+  add('Section', el.section);
+  add('Field name', el.name);
+  add('Type', `${el.tag}${el.type ? ' · ' + el.type : ''}`);
+  add('Required', el.required ? 'yes' : '');
+  if (el.options) add('Options', el.options.join(', '));
+  if (el.constraints) add('Constraints', Object.entries(el.constraints).map(([k,v])=>`${k}=${v}`).join(', '));
+  add('Nearby text', el.nearbyText);
+  add('Expected', step.expected_value);
+  add('Page', step.page_title);
+  const sels = (step.selectors || []).map(s => `<span>${s.kind}</span>:${s.value} (${s.rank})`).join('<br>');
+  let html = rows.map(([k,v]) => `<div><div class="k">${k}</div><div class="v">${escapeHtml(String(v))}</div></div>`).join('');
+  if (sels) html += `<div style="grid-column:1/3"><div class="k">Selectors (ranked)</div><div class="v sels">${sels}</div></div>`;
+  if (rec.task_summary) html += `<div style="grid-column:1/3"><div class="k">Task summary</div><div class="v" style="white-space:pre-wrap">${escapeHtml(rec.task_summary)}</div></div>`;
+  $('detail').innerHTML = html;
+}
+
+function escapeHtml(s){ return s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function go(n){ idx = Math.max(0, Math.min(rec.steps.length - 1, n)); render(); }
+
+$('prev').onclick = () => go(idx - 1);
+$('next').onclick = () => go(idx + 1);
+$('seek').oninput = (e) => go(+e.target.value);
+$('play').onclick = () => {
+  if (playing) { clearInterval(playing); playing = null; $('play').textContent = '▶ Play'; return; }
+  $('play').textContent = '⏸ Pause';
+  playing = setInterval(() => {
+    if (idx >= rec.steps.length - 1) { clearInterval(playing); playing = null; $('play').textContent = '▶ Play'; return; }
+    go(idx + 1);
+  }, 900);
+};
+$('runlive').onclick = () => { if (workflowPath) location.href = `/web/index.html?workflow=${encodeURIComponent(workflowPath)}`; };
+window.addEventListener('resize', render);
+loadList();
+</script>
+</body>
+</html>

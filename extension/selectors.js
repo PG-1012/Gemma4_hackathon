@@ -47,12 +47,47 @@ function _cssPath(el) {
   return parts.join(" > ");
 }
 
+// Nearest preceding section heading (h1-h6 or .section-title) — gives an LLM the
+// "which part of the form" context, e.g. "Approval" vs "Employee".
+function _sectionHeading(el) {
+  let node = el;
+  while (node) {
+    let sib = node.previousElementSibling;
+    while (sib) {
+      if (/^H[1-6]$/.test(sib.tagName) || sib.classList.contains("section-title")) {
+        return _norm(sib.innerText).slice(0, 80);
+      }
+      const inner = sib.querySelector && sib.querySelector("h1,h2,h3,h4,h5,h6,.section-title");
+      if (inner) return _norm(inner.innerText).slice(0, 80);
+      sib = sib.previousElementSibling;
+    }
+    node = node.parentElement;
+  }
+  return "";
+}
+
+// Trimmed text of the element's field container (label + helper text), value removed.
+function _nearbyText(el) {
+  const box = el.closest(".field, label, fieldset, .form-group, .form-row");
+  const t = box ? _norm(box.innerText) : "";
+  return t.slice(0, 160);
+}
+
 function describeElement(el) {
   const r = el.getBoundingClientRect();
   const tag = el.tagName.toLowerCase();
+  const attr = (n) => (el.getAttribute ? el.getAttribute(n) : null) || undefined;
+  // input validation constraints — useful for an LLM to understand the field
+  const constraints = {};
+  for (const k of ["minLength", "maxLength", "min", "max", "step", "pattern", "inputMode"]) {
+    const v = el[k];
+    if (v !== undefined && v !== null && v !== "" && !(k === "maxLength" && v === 524288) && v !== -1) {
+      constraints[k] = v;
+    }
+  }
   return {
     tag,
-    type: (el.getAttribute && el.getAttribute("type")) || el.type || "",
+    type: attr("type") || el.type || "",
     name: el.name || "",
     id: el.id || "",
     label: _norm(_labelFor(el)),
@@ -60,6 +95,17 @@ function describeElement(el) {
     value: el.value || "",
     checked: !!el.checked,
     options: tag === "select" ? [...el.options].map((o) => o.text).filter(Boolean) : null,
+    // --- richer grounding for an LLM ---
+    role: attr("role"),
+    ariaLabel: attr("aria-label"),
+    required: !!el.required,
+    disabled: !!el.disabled,
+    readonly: !!el.readOnly,
+    autocomplete: attr("autocomplete"),
+    constraints: Object.keys(constraints).length ? constraints : undefined,
+    section: _sectionHeading(el),
+    nearbyText: _nearbyText(el),
+    outerHTML: (el.outerHTML || "").replace(/\s+/g, " ").slice(0, 240),
     box: {
       x: Math.round(r.x), y: Math.round(r.y),
       w: Math.round(r.width), h: Math.round(r.height),

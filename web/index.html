@@ -90,7 +90,8 @@
   <header>
     <div>
       <h1>⚡ Browser Speedrunner</h1>
-      <div class="sub">Cerebras × Gemma 4 — multi-agent RPA · provider: <span id="provider">—</span></div>
+      <div class="sub">Cerebras × Gemma 4 — multi-agent RPA · provider: <span id="provider">—</span>
+        · <a href="/web/playback.html" style="color:#6366f1;text-decoration:none">🎬 Recordings</a></div>
     </div>
     <div class="timer">
       <div class="t" id="timer">0.0s</div>
@@ -128,6 +129,13 @@ const feed = $('feed');
 let timerInt = null, t0 = 0, llmTotal = 0;
 
 fetch('/api/run-config').then(r => r.json()).then(c => $('provider').textContent = c.provider);
+
+// Optional ?workflow=<path> lets the playback page launch a specific recording.
+const WORKFLOW = new URLSearchParams(location.search).get('workflow');
+if (WORKFLOW) {
+  const name = WORKFLOW.split('/').slice(-2).join('/');
+  $('status').textContent = `Ready to run recording: ${name}`;
+}
 
 function setActive(agent) {
   document.querySelectorAll('.agent').forEach(a =>
@@ -219,7 +227,7 @@ $('run-btn').addEventListener('click', () => {
   startTimer();
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   const ws = new WebSocket(`${proto}://${location.host}/ws/run`);
-  ws.onopen = () => ws.send(JSON.stringify({}));
+  ws.onopen = () => ws.send(JSON.stringify(WORKFLOW ? { workflow: WORKFLOW } : {}));
   ws.onmessage = (m) => handle(JSON.parse(m.data));
   ws.onerror = () => { addEvent('system', 'system', 'WebSocket error.'); $('run-btn').disabled = false; stopTimer(); };
 });

@@ -112,6 +112,7 @@ def _build_one(raw: dict[str, Any], step_index: int) -> tuple[dict[str, Any], di
         "screenshots": {"after": raw.get("screenshot")},
         "timing": {"t_offset_ms": raw.get("t_offset_ms")},
         "url": raw.get("url"),
+        "page_title": raw.get("title"),
         "upload": (
             {"filename": _basename(raw.get("filename") or value or ""),
              "stored_path": wf_value}
@@ -119,6 +120,13 @@ def _build_one(raw: dict[str, Any], step_index: int) -> tuple[dict[str, Any], di
         ),
     }
     return wf_step, rec_step
+
+
+def _task_summary(wf_steps: list[dict[str, Any]]) -> str:
+    """A plain-English numbered recap of the workflow — a compact prose handle an
+    LLM can read to grasp the whole task without parsing every step object."""
+    lines = [f"{i + 1}. {s['sub_goal']}" for i, s in enumerate(wf_steps)]
+    return "\n".join(lines)
 
 
 def assemble(session: Any) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -130,6 +138,10 @@ def assemble(session: Any) -> tuple[dict[str, Any], dict[str, Any]]:
         wf_steps.append(wf_step)
         rec_steps.append(rec_step)
 
+    action_counts: dict[str, int] = {}
+    for s in wf_steps:
+        action_counts[s["action"]] = action_counts.get(s["action"], 0) + 1
+
     workflow = {"name": session.name, "url": session.url, "steps": wf_steps}
     recording = {
         "schema_version": 1,
@@ -138,6 +150,9 @@ def assemble(session: Any) -> tuple[dict[str, Any], dict[str, Any]]:
         "viewport": session.viewport,
         "recorded_at": session.started_at,
         "user_agent": session.user_agent,
+        # LLM-facing overview: read this first to understand the whole task.
+        "task_summary": _task_summary(wf_steps),
+        "stats": {"step_count": len(wf_steps), "action_counts": action_counts},
         "steps": rec_steps,
     }
     return workflow, recording

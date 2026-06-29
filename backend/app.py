@@ -31,6 +31,8 @@ from recorder import router as recordings_router
 ROOT = Path(__file__).resolve().parent.parent
 WEB_DIR = ROOT / "web"
 DEFAULT_WORKFLOW = Path(__file__).resolve().parent / "workflow" / "expense_demo.json"
+RECORDINGS_DIR = Path(settings.recordings_dir)
+RECORDINGS_DIR.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(title="Browser Speedrunner")
 # The recorder extension posts from a chrome-extension:// origin; also allow
@@ -42,6 +44,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.mount("/web", StaticFiles(directory=str(WEB_DIR)), name="web")
+# Serve recorded artifacts (recording.json + screenshots) to the playback UI.
+app.mount("/recordings", StaticFiles(directory=str(RECORDINGS_DIR)), name="recordings")
 app.include_router(recordings_router)
 
 

@@ -28,6 +28,7 @@ function _send(action, el, value, extra) {
       element: describeElement(el),
       selectors: buildSelectors(el),
       url: location.href,
+      title: document.title,
     },
     extra || {}
   );

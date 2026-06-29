@@ -42,14 +42,17 @@ class CerebrasClient(LLMClient):
         hint: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         content: list[dict[str, Any]] = [{"type": "text", "text": user}]
-        for img in images or []:
-            content.append(
-                {
-                    "type": "image_url",
-                    # TODO: confirm Cerebras accepts data-URI image_url for Gemma.
-                    "image_url": {"url": f"data:image/png;base64,{self._b64(img)}"},
-                }
-            )
+        # Vision is opt-in: not every Cerebras org/model has multimodal enabled.
+        # When disabled we send text only — the Executor still gets the element
+        # map as structured text, which is enough to choose a target.
+        if settings.cerebras_vision:
+            for img in images or []:
+                content.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/png;base64,{self._b64(img)}"},
+                    }
+                )
         payload = {
             "model": settings.cerebras_model,
             "messages": [
@@ -62,6 +65,28 @@ class CerebrasClient(LLMClient):
             "response_format": {"type": "json_object"},
         }
         resp = self._client.post("/chat/completions", json=payload)
-        resp.raise_for_status()
+        if resp.status_code >= 400:
+            self._raise_api_error(resp)
         text = resp.json()["choices"][0]["message"]["content"]
         return self._parse_json(text)
+
+    @staticmethod
+    def _raise_api_error(resp: "httpx.Response") -> None:
+        """Turn a Cerebras 4xx/5xx into an actionable message instead of a raw
+        httpx traceback (the bare `.raise_for_status()` hid the real cause)."""
+        try:
+            err = resp.json().get("error") or resp.json()
+            msg = err.get("message", resp.text)
+            code = err.get("code", "")
+        except Exception:
+            msg, code = resp.text, ""
+        hints = {
+            "payment_required": "Cerebras quota/billing is blocked — check the billing tab, or run with LLM_PROVIDER=mock.",
+            "multimodal_not_enabled": "This Cerebras org/model has no vision — set CEREBRAS_VISION=false to run text-only.",
+        }
+        hint = hints.get(code, "")
+        if resp.status_code == 404:
+            hint = hint or f"Unknown model {settings.cerebras_model!r}. Check CEREBRAS_MODEL against GET /v1/models."
+        raise RuntimeError(
+            f"Cerebras API {resp.status_code} ({code or 'error'}): {msg}" + (f"\n  → {hint}" if hint else "")
+        )

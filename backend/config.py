@@ -31,8 +31,11 @@ class Settings:
     cerebras_base_url: str = os.getenv(
         "CEREBRAS_BASE_URL", "https://api.cerebras.ai/v1"
     )
-    # TODO: replace with the exact Gemma multimodal model id Cerebras serves.
-    cerebras_model: str = os.getenv("CEREBRAS_MODEL", "gemma-vision-TODO")
+    # Cerebras model id — must be one your org serves (see GET /v1/models).
+    cerebras_model: str = os.getenv("CEREBRAS_MODEL", "gpt-oss-120b")
+    # Send screenshots to Cerebras? Off when the org/model has no multimodal;
+    # the Executor then reasons over the text element map alone.
+    cerebras_vision: bool = _bool("CEREBRAS_VISION", True)
 
     # --- Anthropic fallback ---
     anthropic_api_key: str = os.getenv("ANTHROPIC_API_KEY", "")

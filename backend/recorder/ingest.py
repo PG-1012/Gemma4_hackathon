@@ -10,6 +10,8 @@ there too.
 """
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -37,12 +39,43 @@ class StepReq(BaseModel):
     selectors: list[dict[str, Any]] = Field(default_factory=list)
     screenshot: str | None = None
     url: str | None = None
+    title: str | None = None
     filename: str | None = None
     t_offset_ms: int | None = None
 
 
 class StopReq(BaseModel):
     run_id: str
+
+
+@router.get("/list")
+def list_recordings() -> dict[str, Any]:
+    """All saved recordings (most recent first) for the playback UI."""
+    base = Path(store.base_dir)
+    runs: list[dict[str, Any]] = []
+    if base.exists():
+        for d in sorted(base.iterdir(), reverse=True):
+            wf = d / "workflow.json"
+            if not (d.is_dir() and wf.exists()):
+                continue
+            meta = {"run_id": d.name, "name": d.name, "steps": 0,
+                    "recorded_at": "", "workflow_path": str(wf),
+                    "has_recording": (d / "recording.json").exists()}
+            try:
+                w = json.loads(wf.read_text())
+                meta["name"] = w.get("name", d.name)
+                meta["steps"] = len(w.get("steps", []))
+                meta["url"] = w.get("url", "")
+            except Exception:
+                pass
+            rec = d / "recording.json"
+            if rec.exists():
+                try:
+                    meta["recorded_at"] = json.loads(rec.read_text()).get("recorded_at", "")
+                except Exception:
+                    pass
+            runs.append(meta)
+    return {"recordings": runs}
 
 
 @router.post("/start")
