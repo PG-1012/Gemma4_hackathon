@@ -1,10 +1,16 @@
 import type { Config } from "tailwindcss";
+import { heroui } from "@heroui/react";
 
 const config: Config = {
   content: [
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
+    // npm nests @heroui/theme under @heroui/react (not hoisted), so the default
+    // glob misses it and no HeroUI component CSS gets generated. Match the
+    // nested location so Tailwind JIT scans HeroUI's variant class strings.
+    "./node_modules/@heroui/react/node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}",
   ],
+  darkMode: "class",
   theme: {
     extend: {
       colors: {
@@ -56,7 +62,29 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    // cast: HeroUI bundles its own tailwindcss types, which don't structurally
+    // match this project's Config["plugins"] type. Runtime is unaffected.
+    heroui({
+      themes: {
+        dark: {
+          colors: {
+            background: "#0a0e16",
+            foreground: "#e6ebf5",
+            focus: "#00e5a0",
+            content1: "#131a2e",
+            content2: "#1e2638",
+            content3: "#2a3346",
+            primary: { DEFAULT: "#00e5a0", foreground: "#04140f" },
+            secondary: { DEFAULT: "#06b6d4", foreground: "#04140f" },
+            success: { DEFAULT: "#22c55e", foreground: "#04140f" },
+            warning: { DEFAULT: "#f59e0b", foreground: "#0a0e16" },
+            danger: { DEFAULT: "#ef4444", foreground: "#ffffff" },
+          },
+        },
+      },
+    }) as Config["plugins"] extends (infer P)[] ? P : never,
+  ],
 };
 
 export default config;

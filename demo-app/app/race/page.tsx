@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Switch } from "@heroui/react";
 import { AgentName, AgentEvent } from "@/lib/types/agent-events";
 import { Phase } from "@/lib/types/phase";
 import { LAYOUT_A, LAYOUT_B, orderedFieldIds } from "@/lib/fields";
@@ -250,15 +251,15 @@ export default function RacePage() {
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <label className="flex cursor-pointer items-center gap-1.5 text-[11px] text-slate-400">
-            <input
-              type="checkbox"
-              checked={autoHuman}
-              onChange={(e) => setAutoHuman(e.target.checked)}
-              className="h-3.5 w-3.5 accent-ai"
-            />
+          <Switch
+            size="sm"
+            color="success"
+            isSelected={autoHuman}
+            onValueChange={setAutoHuman}
+            classNames={{ label: "text-[11px] text-slate-400" }}
+          >
             auto-human
-          </label>
+          </Switch>
           <StatusBanner phase={phase} detail={detail} />
         </div>
       </header>

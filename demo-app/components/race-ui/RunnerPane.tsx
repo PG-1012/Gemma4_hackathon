@@ -1,6 +1,7 @@
 "use client";
 
 import { RefObject } from "react";
+import { Card, Chip } from "@heroui/react";
 import { Timer } from "./Timer";
 import { Confetti } from "./Confetti";
 
@@ -42,22 +43,25 @@ export function RunnerPane({
   const isAi = side === "ai";
 
   return (
-    <div
-      className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border bg-ink-800"
+    <Card
+      shadow="none"
+      radius="lg"
+      className="flex min-h-0 flex-1 flex-col overflow-hidden border bg-content1"
       style={{ borderColor: isAi ? "rgba(0,229,160,0.35)" : "#1e2638" }}
     >
       {/* header: label + timer + step counter */}
       <div className="flex items-center justify-between px-5 py-3">
         <div className="flex items-center gap-2">
-          <span
-            className="rounded-md px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-widest"
-            style={{
-              color: isAi ? "#04140f" : "#0a0e16",
-              background: accent,
+          <Chip
+            radius="sm"
+            classNames={{
+              base: "h-auto px-2 py-0.5",
+              content: "text-[11px] font-extrabold uppercase tracking-widest",
             }}
+            style={{ color: isAi ? "#04140f" : "#0a0e16", backgroundColor: accent }}
           >
             {label}
-          </span>
+          </Chip>
           {sublabel && <span className="text-[11px] text-slate-400">{sublabel}</span>}
         </div>
         <div className="flex items-center gap-4">
@@ -90,6 +94,6 @@ export function RunnerPane({
         )}
         {isAi && <Confetti trigger={celebrate} />}
       </div>
-    </div>
+    </Card>
   );
 }

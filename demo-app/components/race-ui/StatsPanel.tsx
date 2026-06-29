@@ -1,5 +1,7 @@
 "use client";
 
+import { Card, CardBody, Progress, Chip, Divider } from "@heroui/react";
+
 export function StatsPanel({
   speedup,
   aiSteps,
@@ -16,49 +18,53 @@ export function StatsPanel({
   provider: string;
 }) {
   return (
-    <div className="flex flex-col gap-4 rounded-xl border border-ink-600 bg-ink-800 p-5">
-      <div>
-        <div className="text-[11px] uppercase tracking-wider text-slate-500">Speed advantage</div>
-        <div className="mt-1 font-mono text-4xl font-extrabold tabular-nums text-ai">
-          {speedup ? `${speedup.toFixed(1)}×` : "—"}
+    <Card shadow="none" radius="lg" className="border border-ink-600 bg-content1">
+      <CardBody className="flex flex-col gap-4 p-5">
+        <div>
+          <div className="text-[11px] uppercase tracking-wider text-slate-500">Speed advantage</div>
+          <div className="mt-1 font-mono text-4xl font-extrabold tabular-nums text-ai">
+            {speedup ? `${speedup.toFixed(1)}×` : "—"}
+          </div>
+          <div className="text-[11px] text-slate-500">AI vs. human, live</div>
         </div>
-        <div className="text-[11px] text-slate-500">AI vs. human, live</div>
-      </div>
 
-      <div className="h-px bg-ink-600" />
+        <Divider className="bg-ink-600" />
 
-      <StatRow label="AI" value={`${aiSteps} / ${total}`} color="#00e5a0" pct={aiSteps / total} />
-      <StatRow label="Human" value={`${humanSteps} / ${total}`} color="#cbd5e1" pct={humanSteps / total} />
+        <StatRow label="AI" value={`${aiSteps} / ${total}`} pct={aiSteps / total} color="primary" />
+        <StatRow label="Human" value={`${humanSteps} / ${total}`} pct={humanSteps / total} color="default" />
 
-      <div className="h-px bg-ink-600" />
+        <Divider className="bg-ink-600" />
 
-      <div
-        className={`rounded-lg border px-3 py-2 text-[12px] font-medium transition-all ${
-          recovering
-            ? "border-recovery/50 bg-recovery/10 text-recovery"
-            : "border-ink-600 bg-ink-700/40 text-slate-500"
-        }`}
-      >
-        {recovering ? "⟳ UI changed — Gemma recovering" : "Status nominal"}
-      </div>
+        <Chip
+          variant="flat"
+          radius="md"
+          color={recovering ? "warning" : "default"}
+          classNames={{
+            base: `w-full max-w-full justify-start ${recovering ? "" : "bg-ink-700/40"}`,
+            content: "text-[12px] font-medium",
+          }}
+        >
+          {recovering ? "⟳ UI changed — Gemma recovering" : "Status nominal"}
+        </Chip>
 
-      <div className="text-[11px] text-slate-500">
-        Engine: <span className="text-ai">{provider}</span>
-      </div>
-    </div>
+        <div className="text-[11px] text-slate-500">
+          Engine: <span className="text-ai">{provider}</span>
+        </div>
+      </CardBody>
+    </Card>
   );
 }
 
 function StatRow({
   label,
   value,
-  color,
   pct,
+  color,
 }: {
   label: string;
   value: string;
-  color: string;
   pct: number;
+  color: "primary" | "default";
 }) {
   return (
     <div>
@@ -66,12 +72,15 @@ function StatRow({
         <span className="text-slate-400">{label}</span>
         <span className="font-mono tabular-nums text-slate-200">{value}</span>
       </div>
-      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-ink-600">
-        <div
-          className="h-full rounded-full transition-all duration-300"
-          style={{ width: `${Math.min(100, pct * 100)}%`, background: color }}
-        />
-      </div>
+      <Progress
+        aria-label={`${label} progress`}
+        value={Math.min(100, pct * 100)}
+        size="sm"
+        radius="full"
+        color={color}
+        className="mt-1"
+        classNames={{ track: "bg-ink-600" }}
+      />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { Chip } from "@heroui/react";
 import { Phase } from "@/lib/types/phase";
 
 const TEXT: Record<Phase, string> = {
@@ -35,17 +36,25 @@ export function StatusBanner({
   const accent = ACCENT[phase] ?? "#94a3b8";
   const live = phase === "racing" || phase === "rerunning";
   return (
-    <div className="flex items-center gap-3 rounded-full border border-ink-600 bg-ink-800 px-4 py-2">
-      <span
-        className="inline-flex h-2.5 w-2.5 rounded-full"
-        style={{
-          background: accent,
-          animation: live ? "hl-pulse 1s ease-in-out infinite" : "none",
-        }}
-      />
-      <span className="text-[13px] font-semibold" style={{ color: accent }}>
-        {detail ?? TEXT[phase]}
-      </span>
-    </div>
+    <Chip
+      variant="bordered"
+      radius="full"
+      classNames={{
+        base: "border-ink-600 bg-content1 py-4 pl-3 pr-4",
+        content: "text-[13px] font-semibold",
+      }}
+      startContent={
+        <span
+          className="ml-1 inline-flex h-2.5 w-2.5 rounded-full"
+          style={{
+            background: accent,
+            animation: live ? "hl-pulse 1s ease-in-out infinite" : "none",
+          }}
+        />
+      }
+      style={{ color: accent }}
+    >
+      {detail ?? TEXT[phase]}
+    </Chip>
   );
 }
