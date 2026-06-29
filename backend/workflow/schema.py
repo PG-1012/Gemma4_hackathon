@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
+from dataclasses import field as dc_field  # aliased: `field` is also a Step attribute name
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +24,11 @@ class Step:
     label: str = ""               # visible label hint (helps fuzzy matching)
     value: Any = None             # value to enter / expected value
     expected_value: Any = None    # what the Verifier should observe (defaults to value)
+
+    # --- compiler-produced metadata (all optional / backward compatible) ---
+    variable: bool = False        # True if `value` is a per-run parameter, not a constant
+    var_name: str = ""            # parameter name for a variable step, e.g. "employee_name"
+    selectors: list[str] = dc_field(default_factory=list)  # recorded selector candidates (for repair)
 
     @property
     def verify_target(self) -> Any:

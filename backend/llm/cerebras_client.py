@@ -57,7 +57,9 @@ class CerebrasClient(LLMClient):
                 {"role": "user", "content": content},
             ],
             "temperature": 0.1,
-            "max_tokens": 1024,
+            # Ceiling, not a target: a whole-workflow compile emits a large JSON
+            # array, so cap high enough that the response is never truncated.
+            "max_tokens": 4096,
             # Many OpenAI-compatible servers honor this; harmless if ignored.
             "response_format": {"type": "json_object"},
         }
