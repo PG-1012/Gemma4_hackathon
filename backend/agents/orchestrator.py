@@ -13,6 +13,7 @@ Verifier pass. This keeps the loop fast without losing the safety net.
 from __future__ import annotations
 
 import time
+from pathlib import Path
 from typing import Any, Callable
 
 from config import settings
@@ -26,7 +27,10 @@ from .recovery import Recovery
 
 Emit = Callable[[dict[str, Any]], None]
 
-_SAFE_ACTIONS = {"fill", "type"}
+# Actions verified deterministically by reading the value back (no Verifier LLM
+# round-trip). `upload` qualifies: set_input_files is deterministic and the file
+# name reads back reliably — no vision model can operate a native file dialog.
+_SAFE_ACTIONS = {"fill", "type", "upload"}
 
 
 class Orchestrator:
@@ -98,11 +102,14 @@ class Orchestrator:
                     continue
 
                 idx = decision["index"]
+                act_value = decision.get("value")
+                if decision.get("action") == "upload":
+                    act_value = self._resolve_upload_path(workflow, act_value)
                 try:
-                    self.browser.act(decision["action"], idx, decision.get("value"))
+                    self.browser.act(decision["action"], idx, act_value)
                     self.emit({"type": "action", "agent": "executor", "step_index": step_index,
                                "action": decision["action"], "index": idx,
-                               "value": decision.get("value"),
+                               "value": act_value,
                                "target_label": decision.get("target_label")})
                 except Exception as exc:  # action raised — let Recovery decide
                     last_failure = f"Action error: {exc}"
@@ -153,6 +160,18 @@ class Orchestrator:
                    "elapsed_ms": elapsed_ms})
         return {"success": done, "completed": len(completed), "total": total,
                 "elapsed_ms": elapsed_ms}
+
+    def _resolve_upload_path(self, workflow: Workflow, value: Any) -> Any:
+        """Resolve an `upload` step's file path. Recorded as a path relative to the
+        recording dir (e.g. "uploads/receipt.pdf"); resolve it against the
+        workflow's source directory so set_input_files gets an absolute path."""
+        if not value:
+            return value
+        p = Path(str(value))
+        if p.is_absolute():
+            return str(p)
+        base = getattr(workflow, "base_dir", None)
+        return str((Path(base) / p).resolve()) if base else str(value)
 
     def _maybe_recover(
         self, plan: dict, decision: dict, reason: str, attempt: int

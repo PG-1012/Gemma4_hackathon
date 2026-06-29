@@ -77,9 +77,14 @@ def make_emit():
     return emit
 
 
-def run_once(port: int) -> bool:
-    workflow = Workflow.from_json(WORKFLOW)
-    workflow.url = f"http://127.0.0.1:{port}/web/expense-form.html"
+def run_once(port: int, workflow_path: Path) -> bool:
+    workflow = Workflow.from_json(workflow_path)
+    # If the workflow targets a local /web/ page, point it at THIS throwaway
+    # server (port-agnostic). External URLs (recorded on real sites) are left
+    # untouched. base_dir is preserved, so upload paths still resolve.
+    if ("127.0.0.1" in workflow.url or "localhost" in workflow.url) and "/web/" in workflow.url:
+        tail = workflow.url.split("/web/", 1)[-1]
+        workflow.url = f"http://127.0.0.1:{port}/web/{tail}"
     browser = BrowserController()
     browser.start(workflow.url)
     try:
@@ -94,16 +99,19 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--loops", type=int, default=1, help="number of consecutive runs")
     ap.add_argument("--port", type=int, default=8077)
+    ap.add_argument("--workflow", type=Path, default=WORKFLOW,
+                    help="path to a workflow.json (default: the built-in demo)")
     args = ap.parse_args()
 
     httpd = serve_root(args.port)
-    print(f"Serving {ROOT} at http://127.0.0.1:{args.port}  |  provider={settings.llm_provider}\n")
+    print(f"Serving {ROOT} at http://127.0.0.1:{args.port}  |  provider={settings.llm_provider}")
+    print(f"Workflow: {args.workflow}\n")
     passes = 0
     try:
         for i in range(args.loops):
             if args.loops > 1:
                 print(f"\033[1m===== RUN {i+1}/{args.loops} =====\033[0m")
-            passes += run_once(args.port)
+            passes += run_once(args.port, args.workflow)
     finally:
         httpd.shutdown()
     print(f"\n{passes}/{args.loops} runs succeeded.")

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -51,6 +52,13 @@ class Settings:
     skip_safe_verification: bool = _bool("SKIP_SAFE_VERIFY", True)
     # Annotate screenshots with numbered set-of-marks for the vision model.
     use_set_of_marks: bool = _bool("USE_MARKS", True)
+
+    # --- Recorder ---
+    # Where the Chrome extension's captured workflows are written.
+    recordings_dir: str = os.getenv(
+        "RECORDINGS_DIR",
+        str(Path(__file__).resolve().parent / "workflow" / "recordings"),
+    )
 
 
 settings = Settings()

@@ -1,0 +1,24 @@
+{
+  "name": "Acme Expense Report — With Receipt Upload",
+  "url": "http://localhost:8000/web/expense-form.html",
+  "steps": [
+    {"sub_goal": "Enter the employee name", "action": "fill", "field": "employee_name", "label": "Employee Name", "value": "Jordan Avery"},
+    {"sub_goal": "Enter the employee ID", "action": "fill", "field": "employee_id", "label": "Employee ID", "value": "AC-48217"},
+    {"sub_goal": "Enter the work email", "action": "fill", "field": "email", "label": "Work Email", "value": "jordan.avery@acme.com"},
+    {"sub_goal": "Choose the department", "action": "select", "field": "department", "label": "Department", "value": "Engineering"},
+    {"sub_goal": "Choose the expense category", "action": "select", "field": "category", "label": "Expense Category", "value": "Travel"},
+    {"sub_goal": "Enter the amount", "action": "fill", "field": "amount", "label": "Amount", "value": "1284.50"},
+    {"sub_goal": "Enter the expense date", "action": "fill", "field": "expense_date", "label": "Expense Date", "value": "2026-06-15"},
+    {"sub_goal": "Enter the vendor", "action": "fill", "field": "vendor", "label": "Vendor", "value": "United Airlines"},
+    {"sub_goal": "Enter the project code", "action": "fill", "field": "project_code", "label": "Project Code", "value": "PRJ-2026-Q3-114"},
+    {"sub_goal": "Enter the cost center", "action": "fill", "field": "cost_center", "label": "Cost Center", "value": "CC-ENG-07"},
+    {"sub_goal": "Enter the business justification", "action": "fill", "field": "justification", "label": "Business Justification", "value": "Round-trip airfare to attend the Q3 platform architecture summit in Austin."},
+    {"sub_goal": "Attach the receipt", "action": "upload", "field": "receipt_file", "label": "Receipt", "value": "uploads/receipt.pdf", "expected_value": "receipt.pdf"},
+    {"sub_goal": "Select the approving manager", "action": "select", "field": "manager", "label": "Approving Manager", "value": "Sarah Chen"},
+    {"sub_goal": "Select the payment method", "action": "select", "field": "payment_method", "label": "Payment Method", "value": "Corporate Card"},
+    {"sub_goal": "Confirm receipts are attached", "action": "check", "field": "receipts_attached", "label": "Receipts attached", "value": true, "expected_value": "true"},
+    {"sub_goal": "Mark the expense as billable to client", "action": "check", "field": "billable", "label": "Billable to client", "value": true, "expected_value": "true"},
+    {"sub_goal": "Accept the policy certification", "action": "check", "field": "terms", "label": "comply with company policy", "value": true, "expected_value": "true"},
+    {"sub_goal": "Submit the expense report", "action": "submit", "field": "submit-btn", "label": "Submit Expense Report"}
+  ]
+}

@@ -120,6 +120,7 @@ class BrowserController:
             """(i) => { const el = document.querySelector(`[data-aiidx="${i}"]`);
                if (!el) return null;
                if (el.type === 'checkbox' || el.type === 'radio') return String(el.checked);
+               if (el.type === 'file') return el.files && el.files[0] ? el.files[0].name : '';
                return el.value; }""",
             index,
         )
@@ -144,6 +145,12 @@ class BrowserController:
         assert self.page
         self.page.set_checked(self._sel(index), checked, timeout=5000)
 
+    def upload(self, index: int, file_path: str) -> None:
+        """Attach a file to a file input. Replay is deterministic: no vision model
+        can drive a native OS file picker, so we set the input's files directly."""
+        assert self.page
+        self.page.set_input_files(self._sel(index), str(file_path), timeout=5000)
+
     def act(self, action: str, index: int, value: Any = None) -> None:
         """Dispatch a structured action from the Executor."""
         action = (action or "").lower()
@@ -153,6 +160,8 @@ class BrowserController:
             self.select(index, value)
         elif action in {"check", "uncheck"}:
             self.check(index, action == "check")
+        elif action == "upload":
+            self.upload(index, value)
         elif action in {"click", "submit"}:
             self.click(index)
         elif action == "noop":

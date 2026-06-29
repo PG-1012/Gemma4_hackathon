@@ -17,6 +17,7 @@ import threading
 from pathlib import Path
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -25,13 +26,23 @@ from llm import get_llm
 from browser import BrowserController
 from workflow import Workflow
 from agents import Orchestrator
+from recorder import router as recordings_router
 
 ROOT = Path(__file__).resolve().parent.parent
 WEB_DIR = ROOT / "web"
 DEFAULT_WORKFLOW = Path(__file__).resolve().parent / "workflow" / "expense_demo.json"
 
 app = FastAPI(title="Browser Speedrunner")
+# The recorder extension posts from a chrome-extension:// origin; also allow
+# localhost so the form/UI pages can call the API during development.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r"chrome-extension://.*|http://(localhost|127\.0\.0\.1)(:\d+)?",
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.mount("/web", StaticFiles(directory=str(WEB_DIR)), name="web")
+app.include_router(recordings_router)
 
 
 @app.get("/")

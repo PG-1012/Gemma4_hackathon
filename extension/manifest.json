@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Browser Speedrunner Recorder",
+  "version": "0.1.0",
+  "description": "Record a web workflow once; replay it fast with the Gemma agent.",
+  "permissions": ["activeTab", "tabs", "scripting", "storage"],
+  "host_permissions": [
+    "http://localhost/*",
+    "http://127.0.0.1/*",
+    "<all_urls>"
+  ],
+  "background": { "service_worker": "background.js" },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Speedrunner Recorder"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["selectors.js", "content.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ]
+}

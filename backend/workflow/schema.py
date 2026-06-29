@@ -18,7 +18,7 @@ from typing import Any
 @dataclass
 class Step:
     sub_goal: str                 # human-readable intent, e.g. "Enter the amount"
-    action: str                   # fill | select | check | uncheck | click | submit
+    action: str                   # fill | select | check | uncheck | click | submit | upload
     field: str = ""               # DOM name/id hint for matching + verification
     label: str = ""               # visible label hint (helps fuzzy matching)
     value: Any = None             # value to enter / expected value
@@ -34,14 +34,19 @@ class Workflow:
     name: str
     url: str
     steps: list[Step] = field(default_factory=list)
+    # Directory the workflow was loaded from. Used to resolve relative asset paths
+    # (e.g. an `upload` step's "uploads/receipt.pdf"). Not serialized.
+    base_dir: str | None = None
 
     @classmethod
     def from_json(cls, path: str | Path) -> "Workflow":
-        data = json.loads(Path(path).read_text())
+        path = Path(path)
+        data = json.loads(path.read_text())
         return cls(
             name=data["name"],
             url=data["url"],
             steps=[Step(**s) for s in data["steps"]],
+            base_dir=str(path.resolve().parent),
         )
 
     def to_dict(self) -> dict[str, Any]:
