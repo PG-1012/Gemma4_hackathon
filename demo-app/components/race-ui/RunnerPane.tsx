@@ -47,7 +47,7 @@ export function RunnerPane({
       shadow="none"
       radius="lg"
       className="flex min-h-0 flex-1 flex-col overflow-hidden border bg-content1"
-      style={{ borderColor: isAi ? "rgba(0,229,160,0.35)" : "#1e2638" }}
+      style={{ borderColor: isAi ? "rgba(0,229,160,0.35)" : "#2a2a2e" }}
     >
       {/* header: label + timer + step counter */}
       <div className="flex items-center justify-between px-5 py-3">
@@ -58,7 +58,7 @@ export function RunnerPane({
               base: "h-auto px-2 py-0.5",
               content: "text-[11px] font-extrabold uppercase tracking-widest",
             }}
-            style={{ color: isAi ? "#04140f" : "#0a0e16", backgroundColor: accent }}
+            style={{ color: isAi ? "#04140f" : "#0a0a0c", backgroundColor: accent }}
           >
             {label}
           </Chip>

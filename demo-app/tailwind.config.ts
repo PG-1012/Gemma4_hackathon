@@ -23,11 +23,11 @@ const config: Config = {
           DEFAULT: "#cbd5e1",
         },
         ink: {
-          900: "#0a0e16",
-          800: "#0f1422",
-          700: "#161c2c",
-          600: "#1e2638",
-          500: "#2a3346",
+          900: "#0a0a0c", // page background — neutral near-black
+          800: "#161618", // panels / cards
+          700: "#1d1d20",
+          600: "#2a2a2e", // borders
+          500: "#3a3a40", // dividers
         },
         planner: "#6366f1",
         executor: "#06b6d4",
@@ -69,12 +69,12 @@ const config: Config = {
       themes: {
         dark: {
           colors: {
-            background: "#0a0e16",
+            background: "#0a0a0c",
             foreground: "#e6ebf5",
             focus: "#00e5a0",
-            content1: "#131a2e",
-            content2: "#1e2638",
-            content3: "#2a3346",
+            content1: "#161618",
+            content2: "#1d1d20",
+            content3: "#2a2a2e",
             primary: { DEFAULT: "#00e5a0", foreground: "#04140f" },
             secondary: { DEFAULT: "#06b6d4", foreground: "#04140f" },
             success: { DEFAULT: "#22c55e", foreground: "#04140f" },

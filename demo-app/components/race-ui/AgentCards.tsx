@@ -38,7 +38,7 @@ export function AgentCards({
             radius="lg"
             className="border bg-content1 transition-all duration-200"
             style={{
-              borderColor: active ? a.color : "#1e2638",
+              borderColor: active ? a.color : "#2a2a2e",
               boxShadow: active ? `0 0 0 1px ${a.color}, 0 0 22px -8px ${a.color}` : "none",
               opacity: active ? 1 : 0.62,
             }}
