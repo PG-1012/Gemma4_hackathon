@@ -70,7 +70,10 @@ def _run_orchestrator(workflow_path: str, base_url: str,
         workflow = Workflow.from_json(workflow_path)
         # Point the workflow at THIS server (port-agnostic) unless it targets an
         # external host. Keeps the demo robust regardless of which port we run on.
-        if "localhost" in workflow.url or "127.0.0.1" in workflow.url:
+        # The "/web/" guard mirrors run_demo.py: only rewrite our own bundled
+        # pages, never a local-dev recording (e.g. http://localhost:3000/app),
+        # which would otherwise get mangled into {base}/web/http://localhost:....
+        if ("localhost" in workflow.url or "127.0.0.1" in workflow.url) and "/web/" in workflow.url:
             tail = workflow.url.split("/web/", 1)[-1]
             workflow.url = f"{base_url}/web/{tail}"
         browser.start(workflow.url)
