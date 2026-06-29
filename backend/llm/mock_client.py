@@ -32,6 +32,53 @@ def _match_element(step: dict[str, Any], elements: list[dict[str, Any]]) -> dict
     return None
 
 
+# Actions whose value is a fixed choice the workflow always makes, not a per-run
+# parameter. Everything else (fills, selects) is treated as a variable.
+_CONSTANT_ACTIONS = {"check", "uncheck", "click", "submit"}
+
+# Verb templates for phrasing a step's intent from its action + label.
+_INTENT_VERB = {"fill": "Enter the", "select": "Choose the",
+                "check": "Confirm", "uncheck": "Clear", "submit": "Submit",
+                "click": "Click"}
+
+
+def _slug(text: str) -> str:
+    out = "".join(c if c.isalnum() else "_" for c in (text or "").lower())
+    return "_".join(p for p in out.split("_") if p)
+
+
+def _phrase_intent(action: str, label: str, field: str) -> str:
+    pretty = (label or field.replace("_", " ")).strip().rstrip(":")
+    if action == "submit":
+        return "Submit the form"
+    verb = _INTENT_VERB.get(action, "Set the")
+    return f"{verb} {pretty}".strip()
+
+
+def _compile_candidate(c: dict[str, Any]) -> dict[str, Any]:
+    """Mock stand-in for Gemma: enrich one condensed candidate into a clean step."""
+    action = c.get("action", "fill")
+    field = c.get("field") or ""
+    label = c.get("label") or ""
+    value = c.get("value")
+    step: dict[str, Any] = {
+        "sub_goal": c.get("sub_goal") or _phrase_intent(action, label, field),
+        "action": action,
+        "field": field,
+        "label": label,
+        "value": value,
+    }
+    if action in {"check", "uncheck"}:
+        step["expected_value"] = "true" if action == "check" else "false"
+    if action not in _CONSTANT_ACTIONS:
+        step["variable"] = True
+        step["var_name"] = _slug(field or label)
+    else:
+        step["variable"] = False
+        step["var_name"] = ""
+    return step
+
+
 class MockClient(LLMClient):
     name = "mock"
 
@@ -92,5 +139,18 @@ class MockClient(LLMClient):
                 "reasoning": "Transient failure — retry the action." if attempt < 2
                 else "Repeated failure — escalate to human.",
             }
+
+        if role == "compiler":
+            candidates = hint.get("candidates", [])
+            return {"steps": [_compile_candidate(c) for c in candidates]}
+
+        if role == "extractor":
+            # Offline stand-in for reading the document: echo the known values the
+            # demo seeded, trimmed to the requested fields.
+            expected = hint.get("expected") or {}
+            fields = hint.get("fields") or list(expected.keys())
+            out = {f: expected.get(f) for f in fields}
+            out["confidence"] = 0.95 if expected else 0.0
+            return out
 
         return {"error": f"MockClient received unknown role: {role!r}"}

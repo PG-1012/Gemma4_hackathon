@@ -1,0 +1,46 @@
+{
+  "name": "Acme Expense Report — compiled from recording",
+  "url": "http://localhost:8000/web/expense-form.html",
+  "events": [
+    {"t": 0, "type": "navigate", "url": "http://localhost:8000/web/expense-form.html"},
+    {"t": 820, "type": "scroll", "value": 120},
+
+    {"t": 1200, "type": "click",  "element": {"selectors": ["#employee_name", "[name=\"employee_name\"]"], "id": "employee_name", "name": "employee_name", "tag": "input", "type": "text", "label": "Employee Name"}},
+    {"t": 1980, "type": "input",  "element": {"selectors": ["#employee_name"], "id": "employee_name", "name": "employee_name", "tag": "input", "type": "text", "label": "Employee Name"}, "value": "Jordan"},
+    {"t": 2240, "type": "input",  "element": {"selectors": ["#employee_name"], "id": "employee_name", "name": "employee_name", "tag": "input", "type": "text", "label": "Employee Name"}, "value": "Jordan Avery"},
+
+    {"t": 3100, "type": "input",  "element": {"selectors": ["#employee_id"], "id": "employee_id", "name": "employee_id", "tag": "input", "type": "text", "label": "Employee ID"}, "value": "AC-48217"},
+
+    {"t": 4050, "type": "input",  "element": {"selectors": ["#email"], "id": "email", "name": "email", "tag": "input", "type": "email", "label": "Work Email"}, "value": "jordan.avery@acme.com"},
+
+    {"t": 5200, "type": "change", "element": {"selectors": ["#department"], "id": "department", "name": "department", "tag": "select", "type": "select-one", "label": "Department", "options": ["Engineering", "Sales", "Marketing", "Finance"]}, "value": "Engineering"},
+
+    {"t": 6100, "type": "change", "element": {"selectors": ["#category"], "id": "category", "name": "category", "tag": "select", "type": "select-one", "label": "Expense Category", "options": ["Travel", "Meals", "Lodging", "Software"]}, "value": "Travel"},
+
+    {"t": 7300, "type": "input",  "element": {"selectors": ["#amount"], "id": "amount", "name": "amount", "tag": "input", "type": "number", "label": "Amount"}, "value": "1"},
+    {"t": 7420, "type": "input",  "element": {"selectors": ["#amount"], "id": "amount", "name": "amount", "tag": "input", "type": "number", "label": "Amount"}, "value": "1284"},
+    {"t": 7610, "type": "input",  "element": {"selectors": ["#amount"], "id": "amount", "name": "amount", "tag": "input", "type": "number", "label": "Amount"}, "value": "1284.50"},
+
+    {"t": 8400, "type": "input",  "element": {"selectors": ["#expense_date"], "id": "expense_date", "name": "expense_date", "tag": "input", "type": "date", "label": "Expense Date"}, "value": "2026-06-15"},
+
+    {"t": 9200, "type": "input",  "element": {"selectors": ["#vendor"], "id": "vendor", "name": "vendor", "tag": "input", "type": "text", "label": "Vendor"}, "value": "United Airlines"},
+
+    {"t": 10100, "type": "input", "element": {"selectors": ["#project_code"], "id": "project_code", "name": "project_code", "tag": "input", "type": "text", "label": "Project Code"}, "value": "PRJ-2026-Q3-114"},
+
+    {"t": 11000, "type": "input", "element": {"selectors": ["#cost_center"], "id": "cost_center", "name": "cost_center", "tag": "input", "type": "text", "label": "Cost Center"}, "value": "CC-ENG-07"},
+
+    {"t": 12200, "type": "input", "element": {"selectors": ["#justification"], "id": "justification", "name": "justification", "tag": "textarea", "type": "textarea", "label": "Business Justification"}, "value": "Round-trip airfare to attend the Q3 platform architecture summit in Austin."},
+
+    {"t": 13500, "type": "change", "element": {"selectors": ["#manager"], "id": "manager", "name": "manager", "tag": "select", "type": "select-one", "label": "Approving Manager", "options": ["Sarah Chen", "David Kim", "Maria Lopez"]}, "value": "Sarah Chen"},
+
+    {"t": 14300, "type": "change", "element": {"selectors": ["#payment_method"], "id": "payment_method", "name": "payment_method", "tag": "select", "type": "select-one", "label": "Payment Method", "options": ["Corporate Card", "Personal Card", "Bank Transfer"]}, "value": "Corporate Card"},
+
+    {"t": 15200, "type": "change", "element": {"selectors": ["#receipts_attached"], "id": "receipts_attached", "name": "receipts_attached", "tag": "input", "type": "checkbox", "label": "Receipts attached"}, "value": true},
+
+    {"t": 15900, "type": "change", "element": {"selectors": ["#billable"], "id": "billable", "name": "billable", "tag": "input", "type": "checkbox", "label": "Billable to client"}, "value": true},
+
+    {"t": 16600, "type": "change", "element": {"selectors": ["#terms"], "id": "terms", "name": "terms", "tag": "input", "type": "checkbox", "label": "I certify these expenses comply with company policy"}, "value": true},
+
+    {"t": 17500, "type": "click",  "element": {"selectors": ["#submit-btn"], "id": "submit-btn", "name": "", "tag": "button", "type": "submit", "label": "Submit Expense Report"}}
+  ]
+}
