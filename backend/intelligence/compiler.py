@@ -30,6 +30,48 @@ from .recording import RawRecording, element_key, default_selectors
 _SKIP_EVENTS = {"navigate", "focus", "blur", "scroll", "mouseover", "mousemove", "keydown", "keyup"}
 # Actions that can be folded into a preceding step on the same element.
 _FOLDABLE = {"fill", "select", "check", "uncheck"}
+# Actions whose value is a fixed choice, not a per-run parameter.
+_CONSTANT_ACTIONS = {"check", "uncheck", "click", "submit"}
+_INTENT_VERB = {"fill": "Enter the", "select": "Choose the", "check": "Confirm",
+                "uncheck": "Clear", "submit": "Submit", "click": "Click"}
+
+
+def _slug(text: str) -> str:
+    out = "".join(c if c.isalnum() else "_" for c in (text or "").lower())
+    return "_".join(p for p in out.split("_") if p)
+
+
+def _expected_for(action: str) -> Any:
+    """What the Verifier should observe — computed locally, not from the model."""
+    if action == "check":
+        return "true"
+    if action == "uncheck":
+        return "false"
+    return None
+
+
+def _fallback_intent(action: str, cand: dict[str, Any]) -> str:
+    """Deterministic sub_goal if the model didn't supply one."""
+    if action == "submit":
+        return "Submit the form"
+    pretty = (cand.get("label") or cand.get("field", "").replace("_", " ")).strip().rstrip(":")
+    return f"{_INTENT_VERB.get(action, 'Set the')} {pretty}".strip()
+
+
+def _step_list(result: dict[str, Any]) -> list[dict[str, Any]]:
+    """Pull the enrichment list out of the model response, tolerant of glitches.
+
+    Small models occasionally mangle the wrapper key (e.g. `=steps`) — so accept
+    `steps`, any list-valued key, or a bare list.
+    """
+    if isinstance(result, list):
+        return result
+    if isinstance(result.get("steps"), list):
+        return result["steps"]
+    for v in result.values():
+        if isinstance(v, list):
+            return v
+    return []
 
 
 def _map_action(ev_type: str, element: dict[str, Any], value: Any) -> str | None:
@@ -114,36 +156,50 @@ class WorkflowCompiler:
 
         steps: list[Step] = []
         for cand, sem in zip(candidates, enriched):
+            action = cand["action"]
+            # FACTS stay local (never round-tripped through the model, so values
+            # can't drift); only the INTELLIGENCE comes from the model.
+            variable = bool(sem.get("variable", action not in _CONSTANT_ACTIONS))
+            var_name = sem.get("var_name") or (_slug(cand["field"] or cand["label"]) if variable else "")
             steps.append(Step(
-                sub_goal=sem.get("sub_goal") or cand["label"] or cand["field"],
-                action=sem.get("action") or cand["action"],
-                field=sem.get("field") or cand["field"],
-                label=sem.get("label") or cand["label"],
-                value=sem.get("value", cand["value"]),
-                expected_value=sem.get("expected_value"),
-                variable=bool(sem.get("variable", False)),
-                var_name=sem.get("var_name", ""),
+                sub_goal=sem.get("sub_goal") or _fallback_intent(action, cand),
+                action=action,
+                field=cand["field"],
+                label=cand["label"],
+                value=cand["value"],
+                expected_value=_expected_for(action),
+                variable=variable,
+                var_name=var_name,
                 selectors=cand["selectors"],
             ))
         return Workflow(name=recording.name, url=recording.url, steps=steps)
 
     def _enrich(self, candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        """One Gemma call: condensed candidates -> semantic, parameterised steps."""
-        # Strip the internal `_key` before sending.
-        view = [{k: v for k, v in c.items() if k != "_key"} for c in candidates]
+        """One Gemma call: condensed candidates -> per-step semantic enrichment.
+
+        The model only sees/returns the index + the facts it needs to reason; it
+        returns `sub_goal` + variable classification keyed by index. Keeping the
+        payload small and not echoing values back is what makes the single
+        whole-workflow call reliable on a fast/small model.
+        """
+        view = [
+            {"i": i, "action": c["action"], "field": c["field"],
+             "label": c["label"], "type": c["type"], "value": c["value"]}
+            for i, c in enumerate(candidates)
+        ]
         user = (
             "Condensed candidate steps from the raw recording:\n"
-            f"{json.dumps(view, indent=2)}\n\n"
-            "Compile these into clean semantic steps. Return one step per candidate, "
-            "in order, with intent sub_goals and variable/constant classification."
+            f"{json.dumps(view)}\n\n"
+            "Return the semantic enrichment (sub_goal, variable, var_name) for each, "
+            "keyed by index i, in order."
         )
         hint = {"role": "compiler", "candidates": view}
         result = self.llm.vision_json(COMPILER_SYSTEM, user, hint=hint)
-        steps = result.get("steps", [])
-        # Defensive: if the model returned the wrong count, pad/truncate to align.
-        if len(steps) != len(candidates):
-            steps = (steps + [{}] * len(candidates))[: len(candidates)]
-        return steps
+
+        sems = _step_list(result)
+        by_i = {s["i"]: s for s in sems if isinstance(s, dict) and "i" in s}
+        # Prefer index alignment; fall back to positional if the model omitted i.
+        return [by_i.get(i, sems[i] if i < len(sems) else {}) for i in range(len(candidates))]
 
 
 # --- variable binding helpers (used by the demo / UI "rerun with new data") ---

@@ -94,11 +94,11 @@ def main() -> int:
         print(json.dumps(decision, indent=2))
 
         idx = decision.get("index")
-        if idx is not None:
+        if idx is not None and decision.get("action") != "noop":
             print(f"\n\033[38;5;42m✓ resolved to element #{idx} "
                   f"({decision.get('target_label')!r}) → {decision.get('action')}\033[0m")
             return 0
-        print("\n\033[38;5;196m✗ no element matched the intent\033[0m")
+        print(f"\n\033[38;5;196m✗ no element matched the intent — {decision.get('reasoning', '')}\033[0m")
         return 1
     finally:
         if browser is not None:

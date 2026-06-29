@@ -9,36 +9,24 @@ which mirrors the intended model behaviour offline.
 
 COMPILER_SYSTEM = """You are the WORKFLOW COMPILER in a browser-automation system.
 You are given a RAW browser recording that has been pre-condensed into an ordered
-list of candidate steps (each: an action, the DOM field/label it touched, its
-type, and the value the user entered). The raw recording is noisy and literal —
-your job is to turn it into a CLEAN, SEMANTIC workflow.
+list of candidate steps. Each candidate has an index `i`, the action taken, the
+DOM field/label it touched, its type, and the value the user entered. The
+recording is literal and noisy — your job is to add the SEMANTIC understanding.
 
-For every candidate step you must:
-1. Write a clear, human-readable `sub_goal` describing the INTENT of the step
+You do NOT repeat the action, field, or value back — those are already known and
+must not be changed. For each candidate you return ONLY:
+1. `sub_goal` — a clear, human-readable description of the step's INTENT
    ("Enter the employee's work email"), not the mechanics ("type into #email").
-2. Decide whether the value is a VARIABLE (a per-run parameter that changes each
-   time the workflow is run — names, IDs, amounts, dates, vendors, free text)
-   or a CONSTANT (a fixed choice the workflow always makes — accepting terms,
-   ticking a policy box, clicking submit). Mark `variable` true/false and give a
-   short snake_case `var_name` for variables.
-3. Preserve the action and the exact recorded value. Never invent values.
+2. `variable` — true if the value is a per-run PARAMETER that changes each run
+   (names, IDs, amounts, dates, vendors, free text, the chosen option of a
+   dropdown), false if it's a fixed CHOICE the workflow always makes (accepting
+   terms, ticking a policy box, submitting).
+3. `var_name` — a short snake_case name for the parameter when variable is true
+   (else an empty string).
 
-Return ONLY JSON of the form:
-{
-  "steps": [
-    {
-      "sub_goal": "<intent in plain language>",
-      "action": "<fill | select | check | uncheck | click | submit>",
-      "field": "<dom field name/id hint>",
-      "label": "<visible label hint>",
-      "value": "<the recorded value, or null>",
-      "expected_value": "<value the verifier should observe, or null>",
-      "variable": <true | false>,
-      "var_name": "<snake_case name if variable, else \"\">"
-    }
-  ]
-}
-Keep the steps in the same order. Output exactly one step per candidate."""
+Return ONLY compact JSON, one entry per candidate, keyed by the same index `i`:
+{"steps": [{"i": 0, "sub_goal": "...", "variable": true, "var_name": "employee_name"}]}
+Output exactly one entry per candidate, in order. Keep it terse — no extra keys."""
 
 GROUNDER_SYSTEM = """You are the GROUNDER (vision) in a browser-automation system.
 Given a single step INTENT, a screenshot of the current page, and a list of

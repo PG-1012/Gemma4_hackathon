@@ -81,11 +81,15 @@ def main() -> int:
     print(f"\n{C['head']}Detected variables ({len(variables)}){R} {C['dim']}— the rerun-with-new-data parameters{R}")
     print("  " + ", ".join(v["var_name"] for v in variables))
 
-    # 3) receipt extraction → auto-fill variables
-    print(f"\n{C['head']}Receipt extraction{R} {C['dim']}— read the document, fill the variables{R}")
+    # 3) receipt extraction → auto-fill variables.
+    # Routed through the mock so the demo is deterministic without a receipt-image
+    # asset; the live extractor reads a real receipt through the same interface.
+    print(f"\n{C['head']}Receipt extraction{R} {C['dim']}— read the document, fill the variables "
+          f"(simulated read){R}")
+    from llm.mock_client import MockClient
     seeded = {"vendor": "Delta Air Lines", "date": "2026-07-02",
               "amount": "942.10", "currency": "USD", "category": "Travel"}
-    extractor = ReceiptExtractor(llm)
+    extractor = ReceiptExtractor(MockClient())
     extracted = extractor.extract(b"<receipt-image-bytes>", expected=seeded)
     print(f"  read: {C['var']}{json.dumps({k: v for k, v in extracted.items() if k != 'confidence'})}{R}"
           f"  {C['dim']}(conf {extracted.get('confidence')}){R}")
