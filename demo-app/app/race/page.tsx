@@ -208,7 +208,8 @@ export default function RacePage() {
   const onRecord = () => {
     if (phase === "idle") {
       setPhase("recording");
-      window.open("/form-a", "_blank", "noopener,width=900,height=1000");
+      // open the form for the currently-selected workflow (expense vs visa)
+      window.open(src, "_blank", "noopener,width=900,height=1000");
     } else if (phase === "recording") {
       setPhase("recorded");
     }
