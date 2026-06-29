@@ -49,20 +49,64 @@ backend/
   split_screen.py       Human-vs-AI side-by-side runner for the demo video
 ```
 
-## Quick start
+## Running everything
+
+There are two runnable pieces: the **Python agent backend** (`backend/`) and the
+**Next.js demo UI** (`demo-app/`). They run independently — the backend proves the
+multi-agent pipeline; the demo-app is the on-camera race surface and can run
+standalone (driven by a local event simulator) or wired to the backend over a
+WebSocket.
+
+### 1. Backend (agents + Playwright)
 
 ```bash
+# from the repo root
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r backend/requirements.txt
-python -m playwright install chromium
+python -m playwright install chromium      # one-time: download the browser
 
-# Run the full loop offline (no API needed) — proves the pipeline end to end:
-cd backend && python run_demo.py            # mock provider
+cp .env.example .env                        # defaults to the offline mock provider
+
+cd backend
+python run_demo.py                          # full multi-agent loop, offline (mock)
 python run_demo.py --loops 20               # reliability stress test
-
-# Live UI + visible browser:
-python app.py            # then open http://localhost:8000
+python app.py                               # live UI + WS server → http://localhost:8000
 ```
+
+- `run_demo.py` runs the orchestration loop end to end and prints per-call
+  latency. Flags: `--loops N` (consecutive runs), `--port`, `--workflow <path>`.
+- `app.py` serves the mock form + reasoning console and streams agent events over
+  `WS /ws/run`. It binds `0.0.0.0:8000`.
+- Set `HEADLESS=false` in `.env` to watch the browser; `HEADLESS=true` to run silently.
+
+> **macOS note:** Playwright's Chromium must be launched from a normal interactive
+> terminal — it can fail with a Mach-port error when started from inside a
+> sandboxed/agent subprocess.
+
+### 2. Demo UI (Next.js race surface)
+
+Requires Node.js 18.17+ (Node 20 LTS recommended) and npm.
+
+```bash
+cd demo-app
+npm install
+npm run dev          # http://localhost:3000  → redirects to /race
+# or a production build:
+npm run build && npm run start
+```
+
+Routes: `/race` (split-screen demo — toggle **Expense / Visa** in the top bar),
+`/form-a` & `/form-b` (expense form, original vs. mutated layout), `/visa-a` &
+`/visa-b` (6-page government wizard, original vs. mutated). By default the race is
+driven by a local simulator; to drive it from the real backend, point
+`NEXT_PUBLIC_AGENT_WS_URL` at the backend (default `ws://localhost:8000/ws/run`)
+and swap in `createWsClient` — see `demo-app/README.md`.
+
+### 3. Browser extension (optional)
+
+`extension/` is an unpacked Chrome extension for capturing real workflows. Load it
+via `chrome://extensions` → **Developer mode** → **Load unpacked** → select
+`extension/`. See `extension/README.md`.
 
 ## Providers
 
